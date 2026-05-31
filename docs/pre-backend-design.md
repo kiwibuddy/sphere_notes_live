@@ -1,10 +1,12 @@
 # SphereNotes Live — Pre-Backend Design Decisions
 
+> **Note:** Day-to-day spec and completion tracking moved to **[source-of-truth.md](./source-of-truth.md)** (includes iPad presenter, **6 OBS scenes**, 3-screen layout, simplified projector UI). This file is detailed design reference only — **some sections are stale** (Pre-Show QR, stats on projector); trust source-of-truth instead.
+
 **Status:** Locked for backend wiring  
 **Event model:** `biblical-worldview-2026` · 4 teaching days  
 **Stack:** Next.js · Supabase Realtime · Claude API · Web Speech · Keynote AppleScript · OBS · Zoom
 
-This document resolves the seven pre-backend work items. Treat each section as the source of truth when implementing live services.
+This document resolves the seven pre-backend work items. Use with [instruction-manual.md](./instruction-manual.md) for operational steps.
 
 ---
 

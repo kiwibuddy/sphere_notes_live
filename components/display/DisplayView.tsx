@@ -9,11 +9,13 @@ export function DisplayView() {
   const {
     displayMode,
     displayQuote,
+    displayQuestion,
     wordcloudEntries,
     meta,
-    reactions,
-    questions,
+    getDayInfo,
   } = useSession();
+
+  const dayInfo = getDayInfo(meta.currentDay);
 
   const wordcloud = useMemo(
     () => filterWordcloud(wordcloudEntries, "session"),
@@ -22,10 +24,13 @@ export function DisplayView() {
 
   if (displayMode === "idle" || meta.status === "waiting") {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#0A0A0F]">
+      <div className="flex min-h-dvh items-center justify-center bg-[#F7F5F2]">
         <div className="text-center">
-          <p className="font-display text-4xl text-[#F5F2EB]">{meta.title}</p>
-          <p className="mt-2 text-[#888]">SphereNotes Live · Display</p>
+          <p className="font-display text-4xl text-foreground">{meta.title}</p>
+          <p className="mt-3 text-xl text-muted">
+            {dayInfo.topic} · {dayInfo.date}
+          </p>
+          <p className="mt-4 text-sm text-muted">SphereNotes Live · Display</p>
         </div>
       </div>
     );
@@ -44,6 +49,26 @@ export function DisplayView() {
     );
   }
 
+  if (displayMode === "question" && displayQuestion) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[#F7F5F2] p-16">
+        <div className="max-w-5xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-widest text-tab-qa">
+            The room is asking
+          </p>
+          <p className="mt-8 font-display text-4xl leading-snug text-foreground md:text-5xl">
+            {displayQuestion.text}
+          </p>
+          {displayQuestion.votes > 0 && (
+            <p className="mt-8 text-lg tabular-nums text-muted">
+              {displayQuestion.votes} upvotes
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (displayMode === "quote" && displayQuote) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[#F7F5F2] p-16">
@@ -54,38 +79,9 @@ export function DisplayView() {
     );
   }
 
-  if (displayMode === "stats") {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#0A0A0F] p-16">
-        <div className="grid grid-cols-2 gap-12 text-center">
-          <DisplayStat emoji="🔥" value={reactions.fire} label="Fire" />
-          <DisplayStat emoji="👏" value={reactions.clap} label="Clap" />
-          <DisplayStat emoji="🤔" value={reactions.think} label="Think" />
-          <DisplayStat emoji="❓" value={questions.length} label="Questions" />
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-function DisplayStat({
-  emoji,
-  value,
-  label,
-}: {
-  emoji: string;
-  value: number;
-  label: string;
-}) {
   return (
-    <div>
-      <p className="text-6xl">{emoji}</p>
-      <p className="mt-4 text-5xl font-semibold tabular-nums text-[#F5F2EB]">
-        {value}
-      </p>
-      <p className="mt-2 text-[#888]">{label}</p>
+    <div className="flex min-h-dvh items-center justify-center bg-[#F7F5F2]">
+      <p className="text-muted">Nothing on display — clear or choose content from presenter</p>
     </div>
   );
 }

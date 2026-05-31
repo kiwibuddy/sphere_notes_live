@@ -10,7 +10,7 @@ export default function SlidesPage() {
   const showContent = isLive || meta.status === "paused";
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="absolute inset-0 overflow-hidden">
       {!showContent && (
         <WaitingOverlay
           show

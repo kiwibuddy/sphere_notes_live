@@ -26,6 +26,7 @@ export interface DisplayPayload {
   quoteText?: string;
   questionId?: string;
   questionText?: string;
+  questionVotes?: number;
   slideNumber?: number;
   askRoomSummary?: string;
 }
@@ -51,6 +52,12 @@ export interface SessionMeta {
   currentDay: number;
   totalDays: number;
   status: SessionStatus;
+}
+
+/** Per-day topic shown under the week title (e.g. "Creation & Fall"). */
+export interface DayInfo {
+  topic: string;
+  date: string;
 }
 
 export interface SubtitleLine {
@@ -137,15 +144,24 @@ export interface Reactions {
 
 export interface SessionContextValue {
   meta: SessionMeta;
+  dayInfo: Record<number, DayInfo>;
+  getDayInfo: (day: number) => DayInfo;
+  setEventTitle: (title: string) => void;
+  setDayTopic: (day: number, topic: string) => void;
+  setDayDate: (day: number, date: string) => void;
   subtitles: SubtitleLine[];
   questions: Question[];
   notes: NoteCard[];
   wordcloudEntries: WordCloudEntry[];
   slides: SlideInfo;
+  slidesLoading: boolean;
+  refreshSlides: () => Promise<void>;
+  setSlideCurrent: (current: number) => void;
   sessionMap: SessionSegment[];
   reactions: Reactions;
   displayMode: DisplayMode;
   displayQuote: string;
+  displayQuestion: { id: string; text: string; votes: number } | null;
   goLive: () => void;
   pause: () => void;
   resume: () => void;
@@ -155,7 +171,7 @@ export interface SessionContextValue {
   voteQuestion: (id: string) => void;
   submitQuestion: (text: string) => void;
   addReaction: (key: keyof Reactions) => void;
-  setDisplayMode: (mode: DisplayMode, quote?: string) => void;
+  setDisplay: (mode: DisplayMode, payload?: DisplayPayload) => void;
   addClipping: (clipping: Omit<Clipping, "id" | "createdAt">) => void;
   clippings: Clipping[];
 }

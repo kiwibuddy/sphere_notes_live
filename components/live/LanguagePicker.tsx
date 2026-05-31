@@ -10,28 +10,48 @@ const LOCALES = Object.keys(LOCALE_LABELS) as SupportedLocale[];
 interface LanguagePickerProps {
   locale: string;
   onChange: (locale: string) => void;
+  variant?: "default" | "dark";
 }
 
-export function LanguagePicker({ locale, onChange }: LanguagePickerProps) {
+export function LanguagePicker({
+  locale,
+  onChange,
+  variant = "default",
+}: LanguagePickerProps) {
   const [open, setOpen] = useState(false);
+  const isDark = variant === "dark";
 
   return (
     <div className="relative">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground"
+        className={cn(
+          "flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium",
+          isDark
+            ? "border-white/20 bg-white/10 text-white"
+            : "border-border bg-surface text-foreground"
+        )}
       >
         {LOCALE_LABELS[locale as SupportedLocale] ?? locale}
-        <ChevronDown className="h-3 w-3 text-muted" />
+        <ChevronDown
+          className={cn("h-3 w-3", isDark ? "text-white/70" : "text-muted")}
+        />
       </button>
       {open && (
         <>
           <div
-            className="fixed inset-0 z-20"
+            className="fixed inset-0 z-[110]"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-full z-30 mt-1 max-h-48 w-44 overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-card">
+          <div
+            className={cn(
+              "absolute right-0 top-full z-[120] mt-1 max-h-48 w-44 overflow-y-auto rounded-lg border py-1 shadow-card",
+              isDark
+                ? "border-white/20 bg-neutral-900"
+                : "border-border bg-surface"
+            )}
+          >
             {LOCALES.map((code) => (
               <button
                 key={code}
@@ -41,8 +61,14 @@ export function LanguagePicker({ locale, onChange }: LanguagePickerProps) {
                   setOpen(false);
                 }}
                 className={cn(
-                  "block w-full px-3 py-2 text-left text-xs hover:bg-background",
-                  locale === code && "font-medium text-tab-live"
+                  "block w-full px-3 py-2 text-left text-xs",
+                  isDark
+                    ? "text-white hover:bg-white/10"
+                    : "hover:bg-background",
+                  locale === code &&
+                    (isDark
+                      ? "font-medium text-white"
+                      : "font-medium text-tab-live")
                 )}
               >
                 {LOCALE_LABELS[code]}

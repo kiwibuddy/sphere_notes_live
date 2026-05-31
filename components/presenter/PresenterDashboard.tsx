@@ -1,229 +1,348 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ObsSceneBar } from "@/components/presenter/ObsSceneBar";
+import { PresenterSettingsModal } from "@/components/presenter/PresenterSettingsModal";
 import { useSession } from "@/lib/session/context";
-import { dayLabels } from "@/lib/mock/session";
 import { cn } from "@/lib/utils";
+import type { LucideIcon } from "lucide-react";
 import {
   Pause,
   Play,
   Radio,
   Square,
   Cloud,
-  Quote,
-  BarChart3,
+  Monitor,
+  MessageCircleQuestion,
+  Settings,
 } from "lucide-react";
 
+function sortQuestionsByVotes(
+  questions: { id: string; text: string; votes: number; status: string }[]
+) {
+  return [...questions]
+    .filter((q) => q.status !== "archived")
+    .sort((a, b) => b.votes - a.votes);
+}
+
 export function PresenterDashboard() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const {
     meta,
+    getDayInfo,
     goLive,
     pause,
     resume,
     endDay,
-    setDay,
     questions,
     slides,
     displayMode,
-    setDisplayMode,
-    notes,
+    displayQuestion,
+    setDisplay,
   } = useSession();
 
-  const dayInfo = dayLabels[meta.currentDay];
+  const dayInfo = getDayInfo(meta.currentDay);
+  const sortedQuestions = sortQuestionsByVotes(questions);
+
+  const topQuestion = sortedQuestions[0];
+
+  const showQuestionOnProjector = (q: {
+    id: string;
+    text: string;
+    votes: number;
+  }) => {
+    setDisplay("question", {
+      questionId: q.id,
+      questionText: q.text,
+      questionVotes: q.votes,
+    });
+  };
 
   return (
-    <div className="min-h-dvh bg-background p-6">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="font-display text-3xl text-foreground">
-              Presenter · {meta.title}
-            </h1>
-            <p className="mt-1 text-muted">
-              {dayInfo.label} · {dayInfo.date} · SphereNotes Live
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Link href="/student">
-              <Button variant="outline" size="sm">
-                Student view
-              </Button>
-            </Link>
-            <Link href="/display" target="_blank">
-              <Button variant="outline" size="sm">
-                Open display
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Session controls */}
-        <section className="mb-6 rounded-lg bg-surface p-6 shadow-card">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
-            Session control
-          </h2>
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={meta.status} />
-            {meta.status === "waiting" && (
-              <Button onClick={goLive} className="gap-2">
-                <Radio className="h-4 w-4" />
-                Go Live
-              </Button>
-            )}
-            {meta.status === "live" && (
-              <Button variant="outline" onClick={pause} className="gap-2">
-                <Pause className="h-4 w-4" />
-                Pause (break)
-              </Button>
-            )}
-            {meta.status === "paused" && (
-              <Button onClick={resume} className="gap-2">
-                <Play className="h-4 w-4" />
-                Resume
-              </Button>
-            )}
-            {(meta.status === "live" || meta.status === "paused") && (
-              <Button variant="outline" onClick={endDay} className="gap-2">
-                <Square className="h-4 w-4" />
-                End Day
-              </Button>
-            )}
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            {[1, 2, 3, 4].map((d) => (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDay(d)}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium",
-                  meta.currentDay === d
-                    ? "bg-foreground text-background"
-                    : "bg-background text-muted hover:text-foreground"
-                )}
-              >
-                Day {d}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Stats */}
-          <section className="rounded-lg bg-surface p-6 shadow-card">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
-              Live stats
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <Stat label="Slide" value={`${slides.current} / ${slides.total}`} />
-              <Stat label="Questions" value={String(questions.length)} />
-              <Stat label="AI Notes" value={String(notes.length)} />
-              <Stat label="Display" value={displayMode} />
-            </div>
-          </section>
-
-          {/* Push to screen */}
-          <section className="rounded-lg bg-surface p-6 shadow-card">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
-              Push to screen (OBS)
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setDisplayMode("wordcloud")}
-              >
-                <Cloud className="h-4 w-4" />
-                Word Cloud
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() =>
-                  setDisplayMode(
-                    "quote",
-                    notes.find((n) => n.type === "quote")?.content
-                      .quote as string
-                  )
-                }
-              >
-                <Quote className="h-4 w-4" />
-                Pull Quote
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setDisplayMode("stats")}
-              >
-                <BarChart3 className="h-4 w-4" />
-                Stats
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setDisplayMode("idle")}
-              >
-                Clear display
-              </Button>
-            </div>
-            <p className="mt-3 text-xs text-muted">
-              Open <code className="rounded bg-background px-1">/display</code>{" "}
-              as an OBS Browser Source (1920×1080).
-            </p>
-          </section>
-
-          {/* Q&A moderation */}
-          <section className="rounded-lg bg-surface p-6 shadow-card md:col-span-2">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted">
-              Questions ({questions.length})
-            </h2>
-            <div className="max-h-64 space-y-2 overflow-y-auto">
-              {questions.map((q) => (
-                <div
-                  key={q.id}
-                  className="flex items-start justify-between gap-4 rounded-md bg-background p-3"
-                >
-                  <p className="text-sm text-foreground">{q.text}</p>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-tab-qa">
-                    {q.votes}
+    <div className="flex min-h-dvh flex-col bg-background">
+      <div className="flex-1 overflow-y-auto p-4 pb-6 md:p-6">
+        <div className="mx-auto max-w-5xl">
+          <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="font-display text-2xl text-foreground md:text-3xl">
+                {meta.title}
+              </h1>
+              <p className="mt-1 text-sm text-muted md:text-base">
+                {dayInfo.topic} · {dayInfo.date}
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                Slide {slides.current} of {slides.total}
+                {questions.length > 0 && ` · ${questions.length} questions`}
+                {displayMode !== "idle" && (
+                  <span className="text-foreground">
+                    {" "}
+                    · Projector: {displayMode}
                   </span>
-                </div>
-              ))}
+                )}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {meta.status === "waiting" && (
+                <Button
+                  size="sm"
+                  onClick={goLive}
+                  className="gap-1.5 bg-live-active text-white hover:bg-live-active/90"
+                >
+                  <Radio className="h-3.5 w-3.5" />
+                  Go Live
+                </Button>
+              )}
+              {meta.status === "live" && (
+                <>
+                  <Button
+                    size="sm"
+                    disabled
+                    className="gap-1.5 bg-live-active text-white opacity-100"
+                  >
+                    <span className="h-1.5 w-1.5 animate-pulse-live rounded-full bg-white" />
+                    Live
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={pause}
+                    className="gap-1.5 bg-orange-500 text-white hover:bg-orange-600"
+                  >
+                    <Pause className="h-3.5 w-3.5" />
+                    Pause
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={endDay}
+                    className="gap-1.5"
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                    End Day
+                  </Button>
+                </>
+              )}
+              {meta.status === "paused" && (
+                <>
+                  <Button
+                    size="sm"
+                    disabled
+                    className="gap-1.5 bg-orange-500 text-white opacity-100"
+                  >
+                    Paused
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={resume}
+                    className="gap-1.5 bg-live-active text-white hover:bg-live-active/90"
+                  >
+                    <Play className="h-3.5 w-3.5" />
+                    Resume
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={endDay}
+                    className="gap-1.5"
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                    End Day
+                  </Button>
+                </>
+              )}
+
+              <Link href="/student">
+                <Button variant="outline" size="sm">
+                  Student view
+                </Button>
+              </Link>
+              <Link href="/display" target="_blank">
+                <Button variant="outline" size="sm">
+                  Open display
+                </Button>
+              </Link>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSettingsOpen(true)}
+                className="px-2.5"
+                aria-label="Session settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+          </header>
+
+          {/* Projector content — what /display shows before OBS SphereNotes scene */}
+          <section className="mb-6 rounded-xl bg-surface p-4 shadow-card md:p-6">
+            <div className="mb-4 flex items-start gap-3">
+              <Monitor className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Show on projector
+                </h2>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Step 1: pick content below. Step 2: tap{" "}
+                  <strong>SphereNotes</strong> in the OBS bar. Slides and camera
+                  use the other OBS buttons — not this section.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-3">
+              <ProjectorButton
+                icon={Cloud}
+                label="Word cloud"
+                description="Live words from your teaching"
+                active={displayMode === "wordcloud"}
+                onClick={() => setDisplay("wordcloud")}
+              />
+              <ProjectorButton
+                icon={MessageCircleQuestion}
+                label="Top question"
+                description={
+                  topQuestion
+                    ? `${topQuestion.votes} votes — highest so far`
+                    : "No questions yet"
+                }
+                active={
+                  displayMode === "question" &&
+                  displayQuestion?.id === topQuestion?.id
+                }
+                disabled={!topQuestion}
+                onClick={() => topQuestion && showQuestionOnProjector(topQuestion)}
+              />
+              <ProjectorButton
+                icon={Square}
+                label="Clear"
+                description="Blank SphereNotes display"
+                active={displayMode === "idle"}
+                onClick={() => setDisplay("idle")}
+                variant="muted"
+              />
+            </div>
+          </section>
+
+          {/* Questions — choose which one to show */}
+          <section className="rounded-xl bg-surface p-4 shadow-card md:p-6">
+            <h2 className="mb-1 text-sm font-semibold text-foreground">
+              Questions
+            </h2>
+            <p className="mb-4 text-xs text-muted">
+              Tap <strong>Show</strong> on any question to put it on the
+              projector. Use &ldquo;Top question&rdquo; above for the most
+              upvoted one.
+            </p>
+
+            <div className="space-y-2">
+              {sortedQuestions.length === 0 ? (
+                <p className="rounded-lg bg-background p-4 text-sm text-muted">
+                  No questions yet — students can ask when the session is live.
+                </p>
+              ) : (
+                sortedQuestions.map((q) => {
+                  const isOnProjector =
+                    displayMode === "question" && displayQuestion?.id === q.id;
+
+                  return (
+                    <div
+                      key={q.id}
+                      className={cn(
+                        "flex items-start gap-3 rounded-lg border p-3",
+                        isOnProjector
+                          ? "border-tab-qa bg-tab-qa/5"
+                          : "border-transparent bg-background"
+                      )}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-relaxed text-foreground">
+                          {q.text}
+                        </p>
+                        <p className="mt-1 text-xs tabular-nums text-muted">
+                          {q.votes} {q.votes === 1 ? "vote" : "votes"}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => showQuestionOnProjector(q)}
+                        className={cn(
+                          "shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-colors",
+                          isOnProjector
+                            ? "bg-tab-qa text-white"
+                            : "bg-surface ring-1 ring-border hover:bg-background"
+                        )}
+                      >
+                        {isOnProjector ? "On screen" : "Show"}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </section>
         </div>
       </div>
+
+      <ObsSceneBar />
+
+      <PresenterSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
     </div>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const variants: Record<string, "live" | "muted" | "outline"> = {
-    live: "live",
-    paused: "muted",
-    waiting: "outline",
-    ended: "outline",
-  };
+function ProjectorButton({
+  icon: Icon,
+  label,
+  description,
+  active,
+  disabled,
+  onClick,
+  variant = "default",
+}: {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  active?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  variant?: "default" | "muted";
+}) {
   return (
-    <Badge variant={variants[status] ?? "outline"} className="uppercase">
-      {status}
-    </Badge>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-background p-3">
-      <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 text-lg font-semibold capitalize text-foreground">
-        {value}
-      </p>
-    </div>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "flex min-h-[88px] flex-col items-start rounded-xl border-2 p-4 text-left transition-all active:scale-[0.98]",
+        "touch-manipulation disabled:opacity-40",
+        active
+          ? "border-foreground bg-foreground text-background"
+          : variant === "muted"
+            ? "border-border bg-background text-foreground"
+            : "border-border bg-background text-foreground hover:border-foreground/30"
+      )}
+    >
+      <Icon
+        className={cn(
+          "h-5 w-5",
+          active ? "text-background" : "text-muted"
+        )}
+      />
+      <span className="mt-2 text-sm font-semibold">{label}</span>
+      <span
+        className={cn(
+          "mt-0.5 text-[11px] leading-snug",
+          active ? "text-background/70" : "text-muted"
+        )}
+      >
+        {description}
+      </span>
+    </button>
   );
 }

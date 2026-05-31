@@ -9,8 +9,8 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 export default function WeekPage() {
-  const { meta } = useSession();
-  const days = getWeekDays(meta.currentDay);
+  const { meta, dayInfo, slides } = useSession();
+  const days = getWeekDays(meta.currentDay, dayInfo);
   const selectableDays = days.filter((d) => d.status !== "upcoming");
   const defaultDay =
     selectableDays.find((d) => d.status === "today")?.day ??
@@ -18,7 +18,12 @@ export default function WeekPage() {
     1;
 
   const [selectedDay, setSelectedDay] = useState(defaultDay);
-  const archive = buildDayArchive(selectedDay, meta.currentDay);
+  const archive = buildDayArchive(
+    selectedDay,
+    meta.currentDay,
+    dayInfo,
+    selectedDay === meta.currentDay ? slides : undefined
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">

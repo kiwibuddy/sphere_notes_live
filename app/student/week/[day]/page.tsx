@@ -10,8 +10,13 @@ import { ArrowLeft } from "lucide-react";
 export default function DayArchivePage() {
   const params = useParams();
   const day = Number(params.day);
-  const { meta } = useSession();
-  const archive = buildDayArchive(day, meta.currentDay);
+  const { meta, dayInfo, slides } = useSession();
+  const archive = buildDayArchive(
+    day,
+    meta.currentDay,
+    dayInfo,
+    day === meta.currentDay ? slides : undefined
+  );
 
   if (Number.isNaN(day) || day < 1 || day > 4) {
     return (

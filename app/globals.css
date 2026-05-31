@@ -17,7 +17,7 @@
 
 @layer utilities {
   .student-app {
-    @apply min-h-dvh w-full;
+    @apply h-dvh max-h-dvh w-full overflow-hidden;
   }
   .scrollbar-none {
     scrollbar-width: none;

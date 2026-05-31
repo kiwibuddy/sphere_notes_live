@@ -1,4 +1,4 @@
-import type { DayArchive, SessionMeta } from "@/types/session";
+import type { DayArchive, DayInfo, SessionMeta } from "@/types/session";
 
 export const EVENT_ID = "biblical-worldview-2026";
 
@@ -11,12 +11,21 @@ export const defaultMeta: SessionMeta = {
   status: "waiting",
 };
 
-export const dayLabels: Record<number, { label: string; date: string }> = {
-  1: { label: "Day 1", date: "Monday 2 June" },
-  2: { label: "Day 2", date: "Tuesday 3 June" },
-  3: { label: "Day 3", date: "Wednesday 4 June" },
-  4: { label: "Day 4", date: "Thursday 5 June" },
+export const defaultDayInfo: Record<number, DayInfo> = {
+  1: { topic: "Day 1", date: "Monday 2 June" },
+  2: { topic: "Day 2", date: "Tuesday 3 June" },
+  3: { topic: "Day 3", date: "Wednesday 4 June" },
+  4: { topic: "Day 4", date: "Thursday 5 June" },
 };
+
+/** @deprecated Use defaultDayInfo or session context getDayInfo */
+export const dayLabels: Record<number, { label: string; date: string }> =
+  Object.fromEntries(
+    Object.entries(defaultDayInfo).map(([day, info]) => [
+      day,
+      { label: info.topic, date: info.date },
+    ])
+  );
 
 export function getDayStatus(
   day: number,

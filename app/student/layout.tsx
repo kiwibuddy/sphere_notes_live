@@ -9,7 +9,7 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="student-app flex min-h-dvh flex-col bg-background">
+    <div className="student-app flex h-dvh max-h-dvh flex-col overflow-hidden bg-background">
       <SessionHeader />
       <StudentTopNav />
       <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

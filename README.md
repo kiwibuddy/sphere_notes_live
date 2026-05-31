@@ -2,6 +2,11 @@
 
 Real-time companion app for live classroom teaching. MVP runs entirely on **mock data** — no API keys required.
 
+**Docs (start here):**
+
+- **[Source of truth & roadmap](docs/source-of-truth.md)** — what’s built, what’s left, single spec (supersedes PRD docx for day-to-day)
+- **[Instruction manual](docs/instruction-manual.md)** — how to run a session (mock now, live later) + OBS/Zoom/iPad/Mac setup
+
 ## Quick start
 
 ```bash

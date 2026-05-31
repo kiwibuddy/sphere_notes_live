@@ -3,11 +3,10 @@
 import { Badge } from "@/components/ui/badge";
 import { ReactionsInline } from "@/components/layout/ReactionsInline";
 import { useSession } from "@/lib/session/context";
-import { dayLabels } from "@/lib/mock/session";
 
 export function SessionHeader() {
-  const { meta } = useSession();
-  const dayInfo = dayLabels[meta.currentDay];
+  const { meta, getDayInfo } = useSession();
+  const dayInfo = getDayInfo(meta.currentDay);
 
   return (
     <header className="shrink-0 border-b border-border px-4 pb-3 pt-3 md:px-6 md:pb-4 md:pt-4 lg:px-8">
@@ -17,7 +16,7 @@ export function SessionHeader() {
             {meta.title}
           </h1>
           <p className="mt-1 text-xs text-muted md:text-sm">
-            {dayInfo.label} · {dayInfo.date} · {meta.presenter}
+            {dayInfo.topic} · {dayInfo.date} · {meta.presenter}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
