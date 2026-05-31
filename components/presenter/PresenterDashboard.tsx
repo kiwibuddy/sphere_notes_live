@@ -198,20 +198,6 @@ export function PresenterDashboard() {
             </div>
           </section>
         </div>
-
-        {/* QR placeholder */}
-        <section className="mt-6 rounded-lg bg-surface p-6 shadow-card">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted">
-            Student join
-          </h2>
-          <p className="text-sm text-muted">
-            Students scan QR or visit:{" "}
-            <strong className="text-foreground">/student</strong>
-          </p>
-          <div className="mt-4 flex h-32 w-32 items-center justify-center rounded-lg border-2 border-dashed border-border bg-background text-xs text-muted">
-            QR (live wiring)
-          </div>
-        </section>
       </div>
     </div>
   );

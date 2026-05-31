@@ -1,26 +1,29 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { ReactionsInline } from "@/components/layout/ReactionsInline";
 import { useSession } from "@/lib/session/context";
 import { dayLabels } from "@/lib/mock/session";
-import { cn } from "@/lib/utils";
 
 export function SessionHeader() {
   const { meta } = useSession();
   const dayInfo = dayLabels[meta.currentDay];
 
   return (
-    <header className="shrink-0 border-b border-border px-5 pb-3 pt-2">
-      <div className="flex items-start justify-between gap-3">
+    <header className="shrink-0 border-b border-border px-4 pb-3 pt-3 md:px-6 md:pb-4 md:pt-4 lg:px-8">
+      <div className="mx-auto flex max-w-6xl items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl leading-tight text-foreground">
+          <h1 className="font-display text-xl leading-tight text-foreground md:text-2xl lg:text-3xl">
             {meta.title}
           </h1>
-          <p className="mt-0.5 text-xs text-muted">
+          <p className="mt-1 text-xs text-muted md:text-sm">
             {dayInfo.label} · {dayInfo.date} · {meta.presenter}
           </p>
         </div>
-        <StatusChip status={meta.status} />
+        <div className="flex shrink-0 items-center gap-3">
+          <ReactionsInline />
+          <StatusChip status={meta.status} />
+        </div>
       </div>
     </header>
   );
@@ -58,26 +61,10 @@ export function WaitingOverlay({
 }) {
   if (!show) return null;
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 px-8 backdrop-blur-sm">
-      <p className="text-center text-sm text-muted">{message}</p>
+    <div className="absolute inset-0 z-10 flex items-center justify-center bg-background px-8">
+      <p className="max-w-md text-center text-sm text-muted md:text-base">
+        {message}
+      </p>
     </div>
   );
-}
-
-export function tabAccentClass(
-  tab: string,
-  isActive: boolean,
-  isLive: boolean
-) {
-  if (!isLive && tab !== "week" && tab !== "qa") {
-    return "text-live-waiting";
-  }
-  const colors: Record<string, string> = {
-    live: "text-tab-live",
-    qa: "text-tab-qa",
-    slides: "text-tab-slides",
-    notes: "text-tab-notes",
-    week: "text-tab-week",
-  };
-  return cn(isActive ? colors[tab] : "text-muted");
 }

@@ -1,26 +1,34 @@
 "use client";
 
 import type { WordCloudWord } from "@/types/session";
-import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import type { WordCloudMode } from "@/types/session";
+import { captureWordCloudSnapshot } from "@/lib/wordcloud/capture";
+import {
+  drawWordCloud,
+  layoutWordCloud,
+} from "@/lib/wordcloud/layout";
+import { useEffect, useRef, useState } from "react";
 
-const CATEGORY_COLORS: Record<WordCloudWord["category"], string> = {
-  theology: "text-amber-700",
-  names: "text-tab-live",
-  concepts: "text-tab-cloud",
-  general: "text-muted",
-};
+export interface WordCloudSendPayload {
+  text: string;
+  imageData?: string;
+}
 
 interface WordCloudCanvasProps {
   words: WordCloudWord[];
-  onSendToMine?: (text: string) => void;
+  mode?: WordCloudMode;
+  onSendToMine?: (payload: WordCloudSendPayload) => void;
 }
 
-export function WordCloudCanvas({ words, onSendToMine }: WordCloudCanvasProps) {
-  const maxCount = useMemo(
-    () => Math.max(...words.map((w) => w.count), 1),
-    [words]
-  );
+export function WordCloudCanvas({
+  words,
+  onSendToMine,
+}: WordCloudCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [pulseWord, setPulseWord] = useState<string | null>(null);
+  const [pulsePhase, setPulsePhase] = useState(0);
+  const prevCountsRef = useRef<Map<string, number>>(new Map());
 
   const topWords = words
     .slice()
@@ -29,31 +37,96 @@ export function WordCloudCanvas({ words, onSendToMine }: WordCloudCanvasProps) {
     .map((w) => w.word)
     .join(" · ");
 
+  const handleSend = () => {
+    if (!onSendToMine) return;
+    const imageData = captureWordCloudSnapshot(words);
+    onSendToMine({
+      text: `Word cloud · ${topWords}`,
+      imageData: imageData ?? undefined,
+    });
+  };
+
+  useEffect(() => {
+    const prev = prevCountsRef.current;
+    let bumped: string | null = null;
+
+    for (const w of words) {
+      const before = prev.get(w.word) ?? 0;
+      if (w.count > before) bumped = w.word;
+      prev.set(w.word, w.count);
+    }
+
+    if (bumped) {
+      setPulseWord(bumped);
+      const start = performance.now();
+      const animate = (now: number) => {
+        const t = (now - start) / 600;
+        if (t >= 1) {
+          setPulseWord(null);
+          return;
+        }
+        setPulsePhase(t);
+        requestAnimationFrame(animate);
+      };
+      requestAnimationFrame(animate);
+    }
+  }, [words]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+
+    const render = () => {
+      const rect = container.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.floor(rect.width);
+      const h = Math.floor(rect.height);
+      if (w <= 0 || h <= 0) return;
+
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const placed = layoutWordCloud(words, w, h, ctx);
+      drawWordCloud(ctx, placed, pulseWord, pulsePhase, w, h);
+    };
+
+    render();
+    const ro = new ResizeObserver(render);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [words, pulseWord, pulsePhase]);
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-1 flex-wrap content-center items-center justify-center gap-3 p-4">
-        {words.map((word) => {
-          const scale = 0.75 + (word.count / maxCount) * 0.75;
-          return (
-            <span
-              key={word.word}
-              className={cn(
-                "inline-block cursor-default font-medium transition-transform hover:scale-105",
-                CATEGORY_COLORS[word.category]
-              )}
-              style={{ fontSize: `${scale}rem` }}
-            >
-              {word.word}
-            </span>
-          );
-        })}
+    <div className="flex h-full min-h-[280px] flex-col md:min-h-[360px]">
+      <div
+        ref={containerRef}
+        className="relative min-h-0 flex-1 rounded-xl bg-gradient-to-br from-background via-surface/30 to-background"
+      >
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full"
+          aria-label="Word cloud visualization"
+        />
+        {words.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted">
+            No words in this window yet. Keep speaking — the cloud builds from
+            live speech.
+          </div>
+        )}
       </div>
-      {onSendToMine && (
-        <div className="border-t border-border p-3 text-right">
+      {onSendToMine && words.length > 0 && (
+        <div className="shrink-0 border-t border-border p-3 text-right">
           <button
             type="button"
-            onClick={() => onSendToMine(`Top words: ${topWords}`)}
-            className="text-xs font-medium text-tab-cloud"
+            onClick={handleSend}
+            className="text-xs font-medium text-tab-cloud md:text-sm"
           >
             + My Notes
           </button>

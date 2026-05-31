@@ -16,10 +16,52 @@
 }
 
 @layer utilities {
-  .phone-shell {
-    @apply mx-auto flex h-[min(844px,100dvh)] w-full max-w-[390px] flex-col overflow-hidden bg-background;
+  .student-app {
+    @apply min-h-dvh w-full;
   }
-  .phone-shell-desktop {
-    @apply sm:rounded-[44px] sm:border sm:border-border sm:shadow-[0_60px_200px_rgba(0,0,0,0.12)];
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer components {
+  .mine-editor:empty::before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none text-muted italic;
+  }
+  .mine-editor h1 {
+    @apply mb-3 font-display text-2xl font-normal leading-tight text-foreground md:text-3xl;
+  }
+  .mine-editor h2 {
+    @apply mb-2 font-display text-lg leading-snug text-foreground md:text-xl;
+  }
+  .mine-editor p {
+    @apply mb-2 leading-relaxed;
+  }
+  .mine-editor ul {
+    @apply mb-3 list-disc space-y-1 pl-5;
+  }
+  .mine-editor ol {
+    @apply mb-3 list-decimal space-y-1 pl-5;
+  }
+  .mine-editor li {
+    @apply leading-relaxed;
+  }
+  .mine-editor [style*="text-align: center"],
+  .mine-editor [style*="text-align:center"] {
+    text-align: center;
+  }
+  .mine-editor [style*="text-align: right"],
+  .mine-editor [style*="text-align:right"] {
+    text-align: right;
+  }
+  .mine-editor strong {
+    @apply font-semibold;
+  }
+  .mine-editor em {
+    @apply italic;
   }
 }

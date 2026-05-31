@@ -6,7 +6,7 @@ export const defaultMeta: SessionMeta = {
   eventId: EVENT_ID,
   title: "Biblical Worldview",
   presenter: "Nathaniel Baldock",
-  currentDay: 3,
+  currentDay: 1,
   totalDays: 4,
   status: "waiting",
 };

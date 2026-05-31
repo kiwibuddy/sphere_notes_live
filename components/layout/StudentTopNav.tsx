@@ -11,13 +11,13 @@ import {
   TAB_ACCENT,
 } from "./studentTabs";
 
-export function StudentTabBar() {
+export function StudentTopNav() {
   const pathname = usePathname();
   const { meta, isTabLiveActive } = useSession();
 
   return (
-    <nav className="shrink-0 border-t border-border bg-surface px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
-      <div className="flex">
+    <nav className="hidden shrink-0 border-b border-border bg-surface md:block">
+      <div className="mx-auto flex max-w-6xl items-center gap-1 px-4 lg:px-8">
         {STUDENT_TABS.map((tab) => {
           const active = isTabActive(pathname, tab);
           const live = isTabLiveEnabled(tab.key, meta.status, isTabLiveActive);
@@ -27,29 +27,27 @@ export function StudentTabBar() {
               key={tab.href}
               href={tab.href}
               className={cn(
-                "relative flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors",
-                active ? TAB_ACCENT[tab.key] : "text-muted",
+                "relative flex items-center gap-2 px-4 py-3.5 text-sm font-medium transition-colors",
+                active ? TAB_ACCENT[tab.key] : "text-muted hover:text-foreground",
                 !live && tab.key !== "week" && "opacity-60"
               )}
             >
               {active && (
                 <span
                   className={cn(
-                    "absolute -top-1 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full",
+                    "absolute inset-x-3 bottom-0 h-0.5 rounded-full",
                     live ? "bg-live-active" : "bg-live-waiting"
                   )}
                 />
               )}
               <tab.icon
                 className={cn(
-                  "h-5 w-5",
-                  live && tab.key !== "week" && active && "text-live-active"
+                  "h-4 w-4",
+                  active && live && tab.key !== "week" && "text-live-active"
                 )}
                 strokeWidth={1.6}
               />
-              <span className="text-[9px] font-medium uppercase tracking-[0.06em]">
-                {tab.label}
-              </span>
+              <span className="uppercase tracking-[0.04em]">{tab.label}</span>
             </Link>
           );
         })}

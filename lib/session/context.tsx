@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -13,9 +14,15 @@ import { defaultMeta } from "@/lib/mock/session";
 import { getSubtitlesForDay } from "@/lib/mock/subtitles";
 import { getQuestionsForDay } from "@/lib/mock/questions";
 import { getNotesForDay } from "@/lib/mock/notes";
-import { getWordcloudForDay } from "@/lib/mock/wordcloud";
 import { getSlidesForDay } from "@/lib/mock/slides";
 import { getSessionMapForDay } from "@/lib/mock/sessionMap";
+import type { WordCloudEntry } from "@/lib/wordcloud/entries";
+import {
+  buildSpeechPool,
+  resetWordcloudForDay,
+  seedWordcloud,
+  tickWordcloudFromSpeech,
+} from "@/lib/wordcloud/simulation";
 import type {
   Clipping,
   DisplayMode,
@@ -54,15 +61,11 @@ function savePersisted(meta: SessionMeta, clippings: Clipping[]) {
 }
 
 export function MockSessionProvider({ children }: { children: ReactNode }) {
-  const [meta, setMeta] = useState<SessionMeta>(() => ({
-    ...defaultMeta,
-    ...loadPersisted().meta,
-  }));
-  const [clippings, setClippings] = useState<Clipping[]>(
-    () => loadPersisted().clippings ?? []
-  );
+  const hasHydrated = useRef(false);
+  const [meta, setMeta] = useState<SessionMeta>(defaultMeta);
+  const [clippings, setClippings] = useState<Clipping[]>([]);
   const [questions, setQuestions] = useState(() =>
-    getQuestionsForDay(meta.currentDay)
+    getQuestionsForDay(defaultMeta.currentDay)
   );
   const [displayMode, setDisplayModeState] = useState<DisplayMode>("idle");
   const [displayQuote, setDisplayQuote] = useState("");
@@ -72,28 +75,72 @@ export function MockSessionProvider({ children }: { children: ReactNode }) {
     think: 7,
     question: 3,
   });
+  const [wordcloudEntries, setWordcloudEntries] = useState<WordCloudEntry[]>(
+    () => resetWordcloudForDay(defaultMeta.currentDay)
+  );
+  const speechPoolRef = useRef<WordCloudEntry[]>([]);
 
   const day = meta.currentDay;
 
   const subtitles = useMemo(() => getSubtitlesForDay(day), [day]);
   const notes = useMemo(() => getNotesForDay(day), [day]);
-  const wordcloud = useMemo(() => getWordcloudForDay(day), [day]);
   const slides = useMemo(() => getSlidesForDay(day), [day]);
   const sessionMap = useMemo(() => getSessionMapForDay(day), [day]);
 
+  // Restore session from localStorage after mount (avoids SSR hydration mismatch)
   useEffect(() => {
+    const persisted = loadPersisted();
+    const nextMeta = persisted.meta
+      ? { ...defaultMeta, ...persisted.meta }
+      : defaultMeta;
+    setMeta(nextMeta);
+    setClippings(persisted.clippings ?? []);
+    setQuestions(getQuestionsForDay(nextMeta.currentDay));
+    setWordcloudEntries(resetWordcloudForDay(nextMeta.currentDay));
+    hasHydrated.current = true;
+  }, []);
+
+  useEffect(() => {
+    speechPoolRef.current = buildSpeechPool(subtitles);
+  }, [subtitles]);
+
+  useEffect(() => {
+    if (!hasHydrated.current) return;
+    setWordcloudEntries(resetWordcloudForDay(day));
+  }, [day]);
+
+  useEffect(() => {
+    if (!hasHydrated.current) return;
     savePersisted(meta, clippings);
   }, [meta, clippings]);
 
+  // LIVE: mock speech → word cloud growth while session is live
+  useEffect(() => {
+    if (meta.status !== "live") return;
+
+    const interval = setInterval(() => {
+      setWordcloudEntries((prev) =>
+        tickWordcloudFromSpeech(prev, speechPoolRef.current, 2)
+      );
+    }, 2800);
+
+    return () => clearInterval(interval);
+  }, [meta.status]);
+
   const loadDayData = useCallback((newDay: number) => {
     setQuestions(getQuestionsForDay(newDay));
+    setWordcloudEntries(resetWordcloudForDay(newDay));
   }, []);
 
   const setStatus = useCallback((status: SessionStatus) => {
     setMeta((m) => ({ ...m, status }));
   }, []);
 
-  const goLive = useCallback(() => setStatus("live"), [setStatus]);
+  const goLive = useCallback(() => {
+    setWordcloudEntries(seedWordcloud(speechPoolRef.current));
+    setStatus("live");
+  }, [setStatus]);
+
   const pause = useCallback(() => setStatus("paused"), [setStatus]);
   const resume = useCallback(() => setStatus("live"), [setStatus]);
 
@@ -182,7 +229,7 @@ export function MockSessionProvider({ children }: { children: ReactNode }) {
     subtitles,
     questions,
     notes,
-    wordcloud,
+    wordcloudEntries,
     slides,
     sessionMap,
     reactions,

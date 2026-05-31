@@ -7,14 +7,17 @@ import { useSession } from "@/lib/session/context";
 export default function SlidesPage() {
   const { meta, isTabLiveActive } = useSession();
   const isLive = isTabLiveActive("slides");
+  const showContent = isLive || meta.status === "paused";
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <WaitingOverlay
-        show={!isLive && meta.status !== "paused"}
-        message="Slides will sync when the session goes live."
-      />
-      <SlideViewer />
+      {!showContent && (
+        <WaitingOverlay
+          show
+          message="Slides will sync when the session goes live."
+        />
+      )}
+      {showContent && <SlideViewer />}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export function ReactionsStrip() {
   if (meta.status !== "live") return null;
 
   return (
-    <div className="shrink-0 border-t border-border bg-surface/80 px-4 py-2">
+    <div className="shrink-0 border-t border-border bg-surface/80 px-4 py-2 md:hidden">
       <div className="flex justify-center gap-2">
         {REACTIONS.map(({ key, emoji }) => (
           <button

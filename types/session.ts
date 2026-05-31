@@ -11,7 +11,30 @@ export type NoteCardType =
 
 export type QuestionStatus = "open" | "pinned" | "answered" | "archived";
 
-export type DisplayMode = "wordcloud" | "quote" | "stats" | "idle";
+/** Big-screen / OBS display modes — see docs/pre-backend-design.md §4 */
+export type DisplayMode =
+  | "idle"
+  | "join"
+  | "wordcloud"
+  | "quote"
+  | "question"
+  | "slide"
+  | "stats"
+  | "ask-room";
+
+export interface DisplayPayload {
+  quoteText?: string;
+  questionId?: string;
+  questionText?: string;
+  slideNumber?: number;
+  askRoomSummary?: string;
+}
+
+export interface DisplayState {
+  mode: DisplayMode;
+  payload?: DisplayPayload;
+  updatedAt?: string;
+}
 
 export type ClippingSource =
   | "live"
@@ -57,7 +80,17 @@ export interface WordCloudWord {
   word: string;
   count: number;
   category: "theology" | "names" | "concepts" | "general";
+  /** Timestamps of each occurrence — used for session vs 5 min filter */
+  occurrences?: number[];
 }
+
+export interface WordCloudEntry {
+  word: string;
+  category: WordCloudWord["category"];
+  occurrences: number[];
+}
+
+export type WordCloudMode = "session" | "5min";
 
 export interface SlideInfo {
   current: number;
@@ -91,6 +124,8 @@ export interface Clipping {
   sourceLabel: string;
   text: string;
   createdAt: string;
+  /** JPEG snapshot for word cloud clippings */
+  imageData?: string;
 }
 
 export interface Reactions {
@@ -105,7 +140,7 @@ export interface SessionContextValue {
   subtitles: SubtitleLine[];
   questions: Question[];
   notes: NoteCard[];
-  wordcloud: WordCloudWord[];
+  wordcloudEntries: WordCloudEntry[];
   slides: SlideInfo;
   sessionMap: SessionSegment[];
   reactions: Reactions;

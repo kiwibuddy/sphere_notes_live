@@ -1,11 +1,24 @@
 "use client";
 
+import { useMemo } from "react";
 import { useSession } from "@/lib/session/context";
+import { filterWordcloud } from "@/lib/wordcloud/entries";
 import { WordCloudCanvas } from "@/components/notes/WordCloudCanvas";
 
 export function DisplayView() {
-  const { displayMode, displayQuote, wordcloud, meta, reactions, questions } =
-    useSession();
+  const {
+    displayMode,
+    displayQuote,
+    wordcloudEntries,
+    meta,
+    reactions,
+    questions,
+  } = useSession();
+
+  const wordcloud = useMemo(
+    () => filterWordcloud(wordcloudEntries, "session"),
+    [wordcloudEntries]
+  );
 
   if (displayMode === "idle" || meta.status === "waiting") {
     return (
@@ -24,7 +37,7 @@ export function DisplayView() {
         <h2 className="mb-8 text-center font-display text-3xl text-foreground">
           {meta.title}
         </h2>
-        <div className="flex-1">
+        <div className="min-h-[60vh] flex-1">
           <WordCloudCanvas words={wordcloud} />
         </div>
       </div>
