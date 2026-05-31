@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+  }
+  .font-display {
+    font-family: var(--font-instrument-serif), Georgia, serif;
+  }
+}
+
+@layer utilities {
+  .phone-shell {
+    @apply mx-auto flex h-[min(844px,100dvh)] w-full max-w-[390px] flex-col overflow-hidden bg-background;
+  }
+  .phone-shell-desktop {
+    @apply sm:rounded-[44px] sm:border sm:border-border sm:shadow-[0_60px_200px_rgba(0,0,0,0.12)];
+  }
+}

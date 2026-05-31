@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SphereNotes Live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET & ROOT ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --black:   #000000;
+  --ink:     #0a0a0a;
+  --coal:    #111111;
+  --carbon:  #1a1a1a;
+  --graphite:#242424;
+  --smoke:   #2e2e2e;
+  --ash:     #3a3a3a;
+  --stone:   #555555;
+  --fog:     #888888;
+  --mist:    #b0b0b0;
+  --silver:  #d0d0d0;
+  --snow:    #f5f5f7;   /* Apple's off-white */
+  --white:   #ffffff;
+
+  /* Accents — each tab owns one */
+  --jade:    #30d158;   /* green — My Notes */
+  --sky:     #0a84ff;   /* blue — Subtitles */
+  --flame:   #ff6b35;   /* orange-red — Questions */
+  --amber:   #ffd60a;   /* yellow — AI Notes */
+  --lavender:#bf5af2;   /* purple — Slide */
+  --coral:   #ff375f;   /* live red */
+  --teal:    #5ac8fa;   /* light blue — Word Cloud */
+  --slate:   #636366;   /* Map */
+
+  --radius-sm: 10px;
+  --radius:    16px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+}
+html, body {
+  height: 100%; width: 100%;
+  overflow: hidden;
+  background: #000;
+  color: var(--snow);
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── PHONE FRAME (desktop) ────────────────────────────────────────────── */
+.phone-wrap {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, #1a1a2e 0%, #000 70%);
+}
+.phone {
+  width: min(390px, 100vw);
+  height: min(844px, 100vh);
+  background: var(--black);
+  border-radius: min(50px, 6vw);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.18),
+    0 0 0 1px rgba(0,0,0,0.8),
+    0 60px 200px rgba(0,0,0,0.9),
+    inset 0 0 0 0.5px rgba(255,255,255,0.06);
+}
+
+/* ─── STATUS BAR ───────────────────────────────────────────────────────── */
+.statusbar {
+  height: 50px; min-height: 50px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 28px 8px;
+  background: var(--black);
+}
+.statusbar-time {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--white);
+}
+.statusbar-icons {
+  display: flex; align-items: center; gap: 6px;
+}
+.bar-signal { display:flex; align-items:flex-end; gap:1.5px; height:12px; }
+.bar-signal span {
+  width: 3px; background: var(--white); border-radius: 1px;
+  display: block;
+}
+.bar-signal span:nth-child(1){height:4px}
+.bar-signal span:nth-child(2){height:7px}
+.bar-signal span:nth-child(3){height:10px}
+.bar-signal span:nth-child(4){height:10px; opacity:.35}
+.wifi-icon { width:16px; height:12px; display:flex; align-items:center; justify-content:center; }
+.battery {
+  width: 25px; height: 12px;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 3px;
+  padding: 1.5px;
+  position: relative;
+  display: flex; align-items: center;
+}
+.battery::after {
+  content:''; position:absolute; right:-5px; top:50%; transform:translateY(-50%);
+  width:3px; height:5px;
+  background: rgba(255,255,255,0.35);
+  border-radius: 0 1px 1px 0;
+}
+.battery-fill {
+  width: 20%; height: 100%; background: var(--coral);
+  border-radius: 1px;
+}
+
+/* ─── SESSION HEADER ───────────────────────────────────────────────────── */
+.session-bar {
+  padding: 6px 20px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--black);
+  border-bottom: 0.5px solid rgba(255,255,255,0.07);
+}
+.session-name {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--snow);
+  letter-spacing: -0.01em;
+}
+.session-sub {
+  font-size: 11px;
+  color: var(--stone);
+  font-weight: 400;
+  margin-top: 1px;
+  letter-spacing: 0.01em;
+}
+.live-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,55,95,0.12);
+  border: 0.5px solid rgba(255,55,95,0.3);
+  padding: 5px 11px;
+  border-radius: 20px;
+}
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--coral);
+  animation: blink 1.4s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.live-text {
+  font-size: 11px; font-weight: 600;
+  color: var(--coral);
+  letter-spacing: 0.06em;
+}
+
+/* ─── CONTENT AREA ─────────────────────────────────────────────────────── */
+.content {
+  flex: 1; min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.panel {
+  position: absolute; inset: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+  opacity: 0; pointer-events: none;
+  transform: translateY(8px);
+  transition: opacity .22s ease, transform .22s ease;
+}
+.panel::-webkit-scrollbar { display:none; }
+.panel.active {
+  opacity: 1; pointer-events: auto;
+  transform: translateY(0);
+}
+.panel-inner { padding: 20px; }
+
+/* ─── REACTIONS STRIP ──────────────────────────────────────────────────── */
+.reactions-strip {
+  display: flex; gap: 8px;
+  padding: 10px 20px;
+  background: var(--black);
+  border-top: 0.5px solid rgba(255,255,255,0.06);
+}
+.react-pill {
+  flex: 1;
+  background: var(--carbon);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background .12s, transform .1s;
+  position: relative; overflow: hidden;
+}
+.react-pill::before {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background .12s;
+}
+.react-pill:active { transform: scale(.94); }
+.react-pill:active::before { background: rgba(255,255,255,0.06); }
+.react-emoji { font-size: 18px; line-height: 1; }
+.react-num {
+  font-size: 13px; font-weight: 500;
+  color: var(--fog);
+  font-family: 'DM Sans', sans-serif;
+  min-width: 16px;
+}
+
+/* ─── TAB BAR ──────────────────────────────────────────────────────────── */
+.tabbar {
+  height: 66px; min-height: 66px;
+  background: rgba(10,10,10,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 0.5px solid rgba(255,255,255,0.08);
+  display: flex;
+  padding: 0 4px 8px;
+}
+.tab {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  background: none; border: none;
+  padding: 0;
+  position: relative;
+}
+/* SVG icons — drawn inline, no emoji */
+.tab-ic {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+}
+.tab-ic svg { width: 22px; height: 22px; transition: all .18s; }
+.tab-lbl {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--ash);
+  transition: color .18s;
+  text-transform: uppercase;
+}
+.tab.active .tab-ic { transform: scale(1.1); }
+.tab.active[data-t="cloud"] .tab-ic svg { stroke: var(--teal); fill: none; }
+.tab.active[data-t="cloud"] .tab-lbl { color: var(--teal); }
+.tab.active[data-t="live"] .tab-ic svg { stroke: var(--sky); fill: none; }
+.tab.active[data-t="live"] .tab-lbl { color: var(--sky); }
+.tab.active[data-t="qa"] .tab-ic svg { stroke: var(--flame); fill: none; }
+.tab.active[data-t="qa"] .tab-lbl { color: var(--flame); }
+.tab.active[data-t="ainotes"] .tab-ic svg { stroke: var(--amber); fill: none; }
+.tab.active[data-t="ainotes"] .tab-lbl { color: var(--amber); }
+.tab.active[data-t="slide"] .tab-ic svg { stroke: var(--lavender); fill: none; }
+.tab.active[data-t="slide"] .tab-lbl { color: var(--lavender); }
+.tab.active[data-t="map"] .tab-ic svg { stroke: var(--mist); fill: none; }
+.tab.active[data-t="map"] .tab-lbl { color: var(--mist); }
+.tab.active[data-t="mine"] .tab-ic svg { stroke: var(--jade); fill: none; }
+.tab.active[data-t="mine"] .tab-lbl { color: var(--jade); }
+/* inactive icon colour */
+.tab:not(.active) .tab-ic svg { stroke: var(--ash); fill: none; }
+
+/* ─── SHARED CARD ──────────────────────────────────────────────────────── */
+.card {
+  background: var(--coal);
+  border-radius: var(--radius);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.card-pad { padding: 16px; }
+.eyebrow {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.send-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(48,209,88,0.1);
+  border: 0.5px solid rgba(48,209,88,0.2);
+  color: var(--jade);
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 5px 11px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.send-btn:active { background: rgba(48,209,88,0.2); }
+.send-btn-sm {
+  font-size: 10px; font-weight: 600;
+  color: var(--jade);
+  cursor: pointer;
+  padding: 2px 0;
+  opacity: .7;
+}
+.send-btn-sm:hover { opacity: 1; }
+
+/* ─── 1. WORD CLOUD ────────────────────────────────────────────────────── */
+#p-cloud {
+  background: var(--black);
+}
+.cloud-ui {
+  height: 100%;
+  display: flex; flex-direction: column;
+  padding: 0;
+}
+.cloud-controls {
+  padding: 16px 20px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.seg-ctrl {
+  display: flex;
+  background: var(--carbon);
+  border-radius: 9px;
+  padding: 2px;
+  gap: 2px;
+}
+.seg-btn {
+  background: none; border: none;
+  color: var(--fog);
+  font-size: 11px; font-weight: 600;
+  padding: 5px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: 0.04em;
+}
+.seg-btn.on {
+  background: var(--smoke);
+  color: var(--snow);
+}
+.cloud-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 340px;
+}
+.cw {
+  position: absolute;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  user-select: none;
+  cursor: default;
+  transform: translate(-50%,-50%);
+  animation: wIn .5s cubic-bezier(.34,1.56,.64,1) both;
+  letter-spacing: -0.02em;
+}
+@keyframes wIn { from{opacity:0;transform:translate(-50%,-50%) scale(.4)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
+.cw.theology { color: var(--amber); }
+.cw.concept  { color: var(--teal); }
+.cw.name     { color: var(--sky); }
+.cw.general  { color: var(--ash); }
+.cloud-footer {
+  padding: 14px 20px 20px;
+  display: flex; justify-content: flex-end;
+}
+
+/* ─── 2. LIVE SUBTITLES ────────────────────────────────────────────────── */
+.sub-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sub-status {
+  display: flex; align-items: center; gap: 6px;
+}
+.sub-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--sky);
+  animation: blink 1.2s infinite;
+}
+.sub-label { font-size: 11px; font-weight: 600; color: var(--sky); letter-spacing:.06em; }
+.font-btns { display: flex; gap: 6px; }
+.sz-btn {
+  width: 30px; height: 30px;
+  background: var(--carbon);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: var(--fog);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .12s;
+}
+.sz-btn:active { background: var(--graphite); }
+.sub-line {
+  padding: 13px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.05);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--stone);
+  margin-bottom: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color .15s;
+}
+.sub-line.now {
+  color: var(--snow);
+  border-color: rgba(10,132,255,0.35);
+  background: linear-gradient(135deg, rgba(10,132,255,0.07) 0%, var(--coal) 100%);
+}
+.sub-line.now::after {
+  content: '';
+  position: absolute; bottom: 0; left: 16px; right: 16px;
+  height: 1.5px;
+  background: linear-gradient(90deg, var(--sky), transparent);
+  border-radius: 1px;
+  animation: scan 1.8s ease-in-out infinite;
+}
+@keyframes scan { 0%,100%{opacity:.6} 50%{opacity:.2} }
+.line-action {
+  display: none;
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+}
+.sub-line:hover .line-action, .sub-line:active .line-action { display: block; }
+
+/* ─── 3. Q&A ───────────────────────────────────────────────────────────── */
+.qa-top {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 14px;
+}
+.qa-seg { /* reuse seg-ctrl */ }
+.qa-tally { font-size: 12px; color: var(--stone); margin-left: auto; }
+.ask-row {
+  display: flex; gap: 8px;
+  margin-bottom: 16px;
+}
+.ask-field {
+  flex: 1;
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 14px;
+  color: var(--snow);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  transition: border-color .15s;
+}
+.ask-field:focus { border-color: rgba(255,107,53,0.5); }
+.ask-field::placeholder { color: var(--ash); }
+.ask-go {
+  background: var(--flame);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  color: var(--white);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: opacity .12s;
+}
+.ask-go:active { opacity: .8; }
+
+.qcard {
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 9px;
+  display: flex; gap: 14px; align-items: flex-start;
+  animation: slideIn .25s ease-out;
+}
+@keyframes slideIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:none} }
+.qcard.pinned {
+  border-color: rgba(255,107,53,0.3);
+  background: linear-gradient(135deg, rgba(255,107,53,0.07) 0%, var(--coal) 100%);
+}
+.vote-col {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 5px;
+  flex-shrink: 0;
+}
+.vote-up {
+  width: 36px; height: 36px;
+  background: var(--carbon);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .12s;
+}
+.vote-up svg { width:14px; height:14px; stroke: var(--fog); fill:none; transition: stroke .12s; }
+.vote-up.on { background: rgba(255,107,53,0.12); border-color: rgba(255,107,53,.3); }
+.vote-up.on svg { stroke: var(--flame); }
+.vote-up:active { transform: scale(.88); }
+.vote-n {
+  font-size: 14px; font-weight: 700;
+  color: var(--fog);
+  font-variant-numeric: tabular-nums;
+  transition: color .15s;
+}
+.vote-n.hot { color: var(--flame); }
+.q-body { flex: 1; min-width: 0; }
+.q-pinlabel {
+  font-size: 10px; font-weight: 700;
+  color: var(--flame);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  display: flex; align-items: center; gap: 4px;
+}
+.q-txt { font-size: 14px; line-height: 1.5; color: var(--snow); }
+.q-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 8px;
+}
+.q-age { font-size: 11px; color: var(--stone); }
+
+/* ─── 4. AI NOTES ──────────────────────────────────────────────────────── */
+/* Section title */
+.nc-section {
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: var(--coal);
+  border: 0.5px solid rgba(255,214,10,0.12);
+  animation: cardReveal .35s ease-out both;
+}
+@keyframes cardReveal { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+.nc-section-stripe {
+  height: 2px;
+  background: linear-gradient(90deg, var(--amber) 0%, transparent 100%);
+}
+.nc-section-body { padding: 14px 16px; }
+.nc-section-n { font-size: 10px; font-weight: 700; color: var(--amber); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+.nc-section-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 22px; font-weight: 300;
+  color: var(--snow);
+  line-height: 1.2;
+  letter-spacing: -.01em;
+}
+
+/* Bullet card */
+.nc-bullets {
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  animation: cardReveal .35s .05s ease-out both;
+}
+.nc-bullets-head { font-size: 10px; font-weight: 700; color: var(--stone); text-transform:uppercase; letter-spacing:.1em; margin-bottom:10px; }
+.nc-bullet {
+  display: flex; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid rgba(255,255,255,0.05);
+  font-size: 13.5px; line-height: 1.5; color: var(--snow);
+}
+.nc-bullet:last-of-type { border-bottom: none; }
+.nc-bdot { width: 5px; height: 5px; border-radius: 50%; background: var(--amber); flex-shrink: 0; margin-top: 8px; }
+
+/* Quote card */
+.nc-quote {
+  background: linear-gradient(145deg, rgba(255,214,10,0.06) 0%, var(--coal) 60%);
+  border: 0.5px solid rgba(255,214,10,0.15);
+  border-radius: var(--radius);
+  padding: 20px 18px 14px;
+  margin-bottom: 10px;
+  position: relative;
+  animation: cardReveal .35s .1s ease-out both;
+  overflow: hidden;
+}
+.nc-quote-mark {
+  font-family: 'Fraunces', serif;
+  font-size: 80px; line-height: .7;
+  color: rgba(255,214,10,0.08);
+  position: absolute; top: 10px; left: 12px;
+  pointer-events: none;
+  user-select: none;
+}
+.nc-quote-text {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 17px;
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.6;
+  color: var(--snow);
+  position: relative;
+  padding-left: 18px;
+}
+
+/* Scripture */
+.nc-scripture {
+  background: linear-gradient(135deg, rgba(255,214,10,0.04) 0%, var(--coal) 70%);
+  border: 0.5px solid rgba(255,214,10,0.18);
+  border-left: 2px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  animation: cardReveal .35s .15s ease-out both;
+}
+.nc-ref {
+  font-size: 11px; font-weight: 700;
+  color: var(--amber);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.nc-verse {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 15px; font-style: italic; font-weight: 300;
+  line-height: 1.65;
+  color: rgba(245,245,247,.8);
+}
+
+/* Concept */
+.nc-concept {
+  display: flex; gap: 14px; align-items: center;
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  animation: cardReveal .35s .2s ease-out both;
+}
+.nc-concept-word {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 26px; font-weight: 300;
+  color: var(--teal);
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+.nc-vr { width: 0.5px; height: 40px; background: rgba(255,255,255,0.1); flex-shrink:0; }
+.nc-concept-def { font-size: 12.5px; color: var(--fog); line-height: 1.5; }
+
+/* Story title */
+.nc-story {
+  background: linear-gradient(135deg, rgba(90,200,250,0.06) 0%, var(--coal) 70%);
+  border: 0.5px solid rgba(90,200,250,0.14);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  animation: cardReveal .35s .25s ease-out both;
+}
+.nc-story-eye { font-size: 10px; font-weight: 700; color: var(--teal); letter-spacing:.12em; text-transform:uppercase; margin-bottom:5px; }
+.nc-story-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 19px; font-weight: 300;
+  color: var(--snow);
+  line-height: 1.3; letter-spacing:-.01em;
+}
+
+/* card footer */
+.card-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding-top: 12px; margin-top: 4px;
+  border-top: 0.5px solid rgba(255,255,255,0.06);
+}
+.cf-btn {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: .06em;
+  padding: 5px 11px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 0.5px solid transparent;
+  transition: background .12s;
+}
+.cf-save { background: rgba(255,214,10,0.08); border-color: rgba(255,214,10,0.2); color: var(--amber); }
+.cf-notes { background: rgba(48,209,88,0.08); border-color: rgba(48,209,88,0.2); color: var(--jade); }
+.cf-save:active { background: rgba(255,214,10,0.16); }
+.cf-notes:active { background: rgba(48,209,88,0.16); }
+
+/* ─── 5. SLIDE ─────────────────────────────────────────────────────────── */
+.slide-frame {
+  background: var(--coal);
+  border-radius: var(--radius);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.slide-stage {
+  aspect-ratio: 16/9;
+  background: linear-gradient(145deg, #0d0d28 0%, #06060f 100%);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+.slide-stage::before {
+  content:'';
+  position:absolute; inset:0;
+  background: radial-gradient(ellipse 80% 60% at 30% 40%, rgba(191,90,242,0.08) 0%, transparent 70%);
+}
+.slide-inner { text-align: center; padding: 20px; position: relative; z-index:1; }
+.slide-eyebrow { font-size: 9px; font-weight: 700; color: var(--lavender); letter-spacing:.18em; text-transform:uppercase; margin-bottom:10px; }
+.slide-h {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 20px; font-weight: 300;
+  color: var(--snow); line-height: 1.25;
+  letter-spacing: -.01em;
+  margin-bottom: 10px;
+}
+.slide-pts { text-align: left; display: flex; flex-direction: column; gap: 5px; margin-top: 12px; }
+.slide-pt {
+  display: flex; gap: 8px;
+  font-size: 11px; color: rgba(245,245,247,.6); line-height: 1.4;
+}
+.slide-pt::before { content:'→'; color: var(--lavender); flex-shrink:0; font-size:11px; }
+.slide-bar {
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  border-top: 0.5px solid rgba(255,255,255,0.06);
+}
+.slide-num-lbl { font-family: 'DM Sans', monospace; font-size: 11px; color: var(--stone); white-space: nowrap; }
+.slide-prog { flex:1; height: 2px; background: var(--smoke); border-radius:1px; overflow:hidden; }
+.slide-prog-fill { height:100%; background: var(--lavender); border-radius:1px; width:31%; }
+.slide-thumbs { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.slide-thumb {
+  aspect-ratio:16/9;
+  background: var(--carbon);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--ash);
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.slide-thumb.cur { border-color: rgba(191,90,242,.5); color: var(--lavender); font-weight:600; }
+
+/* ─── 6. SESSION MAP ───────────────────────────────────────────────────── */
+.map-time-hdr { font-size: 11px; color: var(--stone); letter-spacing:.08em; margin-bottom: 20px; }
+.timeline { padding-left: 22px; position: relative; }
+.timeline::before {
+  content:''; position:absolute; left:7px; top:4px; bottom:4px;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--teal), var(--amber), var(--flame), var(--smoke));
+}
+.seg { position: relative; margin-bottom: 16px; cursor: pointer; }
+.seg::before {
+  content:''; position:absolute;
+  left: -19px; top: 9px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ash);
+  background: var(--black);
+  transition: transform .15s;
+}
+.seg:active::before { transform: scale(1.5); }
+.seg.teaching::before { border-color: var(--teal); }
+.seg.story::before    { border-color: var(--amber); }
+.seg.qa::before       { border-color: var(--flame); }
+.seg.now::before      { background: var(--teal); border-color: var(--teal); box-shadow: 0 0 0 3px rgba(90,200,250,0.15); animation: nodePulse 2s infinite; }
+@keyframes nodePulse { 0%,100%{box-shadow:0 0 0 3px rgba(90,200,250,.15)} 50%{box-shadow:0 0 0 6px rgba(90,200,250,0)} }
+.seg-card {
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  transition: border-color .15s;
+}
+.seg-card:hover { border-color: rgba(255,255,255,0.14); }
+.seg.now .seg-card { border-color: rgba(90,200,250,0.25); }
+.seg-type { font-size: 9.5px; font-weight: 700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:3px; }
+.seg.teaching .seg-type { color: var(--teal); }
+.seg.story .seg-type    { color: var(--amber); }
+.seg.qa .seg-type       { color: var(--flame); }
+.seg.now .seg-type { display:flex; align-items:center; gap:5px; }
+.seg-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 15px; font-weight: 300;
+  color: var(--snow); line-height: 1.3;
+  margin-bottom: 5px;
+}
+.seg-meta { display:flex; justify-content:space-between; font-size:10.5px; color: var(--stone); }
+
+/* ─── 7. MY NOTES ──────────────────────────────────────────────────────── */
+.fmt-bar {
+  display: flex; align-items: center; gap: 2px;
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fmt-bar::-webkit-scrollbar { display: none; }
+.fb {
+  width: 32px; height: 32px;
+  background: none; border: none;
+  border-radius: 7px;
+  color: var(--fog);
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .12s, color .12s;
+  font-family: 'Fraunces', Georgia, serif;
+}
+.fb:hover, .fb.on { background: var(--graphite); color: var(--snow); }
+.fb.on { color: var(--jade); }
+.fbr { width: 0.5px; height: 20px; background: rgba(255,255,255,0.1); flex-shrink:0; margin: 0 3px; }
+.notes-editor {
+  background: var(--coal);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  min-height: 130px;
+  font-size: 14.5px; line-height: 1.7;
+  color: var(--snow);
+  font-family: 'DM Sans', sans-serif;
+  outline: none;
+  margin-bottom: 10px;
+  cursor: text;
+  white-space: pre-wrap;
+  -webkit-user-select: text; user-select: text;
+  transition: border-color .15s;
+}
+.notes-editor:focus { border-color: rgba(48,209,88,0.35); }
+.notes-editor:empty::before {
+  content: attr(data-ph);
+  color: var(--ash);
+  font-style: italic;
+  pointer-events: none;
+}
+
+/* Clippings */
+.clip {
+  background: var(--carbon);
+  border: 0.5px solid rgba(255,255,255,0.07);
+  border-left: 2px solid var(--fog);
+  border-radius: var(--radius-sm);
+  padding: 9px 30px 9px 12px;
+  margin-bottom: 8px;
+  position: relative;
+  font-size: 13px;
+  transition: opacity .2s, transform .2s;
+}
+.clip.from-sub  { border-left-color: var(--sky); }
+.clip.from-q    { border-left-color: var(--flame); }
+.clip.from-note { border-left-color: var(--amber); }
+.clip.from-slide{ border-left-color: var(--lavender); }
+.clip-src { font-size: 9.5px; font-weight: 700; letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
+.clip.from-sub  .clip-src { color: var(--sky); }
+.clip.from-q    .clip-src { color: var(--flame); }
+.clip.from-note .clip-src { color: var(--amber); }
+.clip.from-slide .clip-src { color: var(--lavender); }
+.clip-txt { color: var(--fog); line-height: 1.5; }
+.clip-x {
+  position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  background:none; border:none; color: var(--ash);
+  font-size:16px; cursor:pointer; line-height:1; padding:2px;
+}
+.clip-x:hover { color: var(--fog); }
+
+.export-row { display:flex; gap:8px; margin-top:2px; }
+.exp-btn {
+  flex:1; height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: opacity .12s;
+  font-family: 'DM Sans', sans-serif;
+  border: 0.5px solid transparent;
+}
+.exp-btn:active { opacity:.75; }
+.exp-copy { background: var(--carbon); border-color: rgba(255,255,255,0.1); color: var(--fog); }
+.exp-pdf  { background: rgba(48,209,88,0.1); border-color: rgba(48,209,88,0.25); color: var(--jade); }
+.exp-md   { background: var(--carbon); border-color: rgba(255,255,255,0.1); color: var(--stone); }
+.save-line {
+  text-align: center;
+  font-size: 10px; color: var(--ash);
+  margin-top: 8px; letter-spacing:.04em;
+}
+
+/* ─── FLOATING EMOJIS ──────────────────────────────────────────────────── */
+.floats { position:fixed; bottom:130px; right:20px; pointer-events:none; z-index:999; }
+.fem {
+  position:absolute; bottom:0; font-size:22px;
+  animation: fem-up 1.5s ease-out forwards;
+}
+@keyframes fem-up {
+  0%   {opacity:1;transform:translateY(0) scale(1);}
+  100% {opacity:0;transform:translateY(-100px) scale(.5);}
+}
+
+/* ─── TOAST ────────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed;
+  top: 70px; left: 50%; transform: translateX(-50%) translateY(-6px);
+  background: rgba(30,30,30,0.95);
+  backdrop-filter: blur(20px);
+  border: 0.5px solid rgba(255,255,255,0.1);
+  color: var(--jade);
+  padding: 9px 20px;
+  border-radius: 20px;
+  font-size: 13px; font-weight: 600;
+  opacity: 0; pointer-events: none;
+  transition: all .2s;
+  white-space: nowrap;
+  z-index: 999;
+  letter-spacing: .01em;
+}
+#toast.on { opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="phone-wrap">
+<div id="toast"></div>
+<div class="floats" id="floats"></div>
+<div class="phone">
+
+  <!-- STATUS -->
+  <div class="statusbar">
+    <span class="statusbar-time">9:41</span>
+    <div class="statusbar-icons">
+      <div class="bar-signal"><span></span><span></span><span></span><span></span></div>
+      <svg class="wifi-icon" viewBox="0 0 16 12" fill="none"><path d="M8 9.5a1 1 0 100 2 1 1 0 000-2z" fill="white"/><path d="M5.5 7.3a3.5 3.5 0 015 0" stroke="white" stroke-width="1.4" stroke-linecap="round"/><path d="M2.5 4.5a7 7 0 0111 0" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <div class="battery"><div class="battery-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- SESSION HEADER -->
+  <div class="session-bar">
+    <div>
+      <div class="session-name">Being Fully Human in an AI World</div>
+      <div class="session-sub">Session 3 of 6 · Nathaniel Baldock</div>
+    </div>
+    <div class="live-chip">
+      <div class="live-dot"></div>
+      <span class="live-text">LIVE</span>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- 1 CLOUD -->
+    <div class="panel active" id="p-cloud">
+      <div class="cloud-ui">
+        <div class="cloud-controls">
+          <div class="seg-ctrl">
+            <button class="seg-btn on" onclick="segOn(this)">Session</button>
+            <button class="seg-btn" onclick="segOn(this)">5 min</button>
+          </div>
+          <span style="font-size:11px;color:var(--stone);">47 words</span>
+        </div>
+        <div class="cloud-canvas" id="cloudCanvas"></div>
+        <div class="cloud-footer">
+          <button class="send-btn" onclick="doSend('cloud','☁ Top words: Kingdom · AI · Human · Discipleship · Imago Dei')">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 1v10M1 6l5-5 5 5"/></svg>
+            Send to My Notes
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 SUBTITLES -->
+    <div class="panel" id="p-live">
+      <div class="panel-inner">
+        <div class="sub-header">
+          <div class="sub-status">
+            <div class="sub-dot"></div>
+            <span class="sub-label">LIVE · CORRECTED</span>
+          </div>
+          <div class="font-btns">
+            <button class="sz-btn" onclick="subFont(-1)">A−</button>
+            <button class="sz-btn" onclick="subFont(+1)">A+</button>
+          </div>
+        </div>
+        <div id="subLines">
+          <div class="sub-line">And so what we're really grappling with here is the question of what it means to remain fully human…</div>
+          <div class="sub-line">YWAM has always been on the frontier. When the internet came, we adapted. When social media changed everything, we were there.</div>
+          <div class="sub-line">But AI is different. It's not just a new tool — it's a new kind of entity that can think, create, and interact.</div>
+          <div class="sub-line now">
+            The question isn't whether to use AI, it's how to use it in a way that honours the image of God in us.
+            <span class="line-action"><button class="send-btn-sm" onclick="doSend('sub','The question isn\'t whether to use AI, it\'s how to use it in a way that honours the image of God in us.')">+ Notes</button></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Q&A -->
+    <div class="panel" id="p-qa">
+      <div class="panel-inner">
+        <div class="qa-top">
+          <div class="seg-ctrl">
+            <button class="seg-btn on" id="sTop" onclick="qSort('top',this)">Top</button>
+            <button class="seg-btn" id="sNew" onclick="qSort('new',this)">New</button>
+          </div>
+          <span class="qa-tally" id="qtally">14 questions</span>
+        </div>
+        <div class="ask-row">
+          <input class="ask-field" id="askField" placeholder="Ask a question…">
+          <button class="ask-go" onclick="submitQ()">Send</button>
+        </div>
+        <div id="qList">
+          <div class="qcard pinned">
+            <div class="vote-col">
+              <div class="vote-up on" onclick="vt(this)"><svg viewBox="0 0 14 14"><path d="M7 1l6 6H8v6H6V7H1z"/></svg></div>
+              <div class="vote-n hot" id="vn0">23</div>
+            </div>
+            <div class="q-body">
+              <div class="q-pinlabel">
+                <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 1v8M2 4l3-3 3 3"/></svg>
+                Answering now
+              </div>
+              <div class="q-txt">How do we help church communities navigate AI when most pastors don't understand it yet?</div>
+              <div class="q-foot">
+                <span class="q-age">12 min ago</span>
+                <button class="send-btn-sm" onclick="doSend('q','How do we help church communities navigate AI when most pastors don\'t understand it yet? (23 votes)')">+ Notes</button>
+              </div>
+            </div>
+          </div>
+          <div class="qcard">
+            <div class="vote-col">
+              <div class="vote-up" onclick="vt(this)"><svg viewBox="0 0 14 14"><path d="M7 1l6 6H8v6H6V7H1z"/></svg></div>
+              <div class="vote-n">17</div>
+            </div>
+            <div class="q-body">
+              <div class="q-txt">Is there a difference between AI generating a sermon and AI helping with research for one?</div>
+              <div class="q-foot"><span class="q-age">8 min ago</span><button class="send-btn-sm" onclick="doSend('q','AI generating a sermon vs AI helping research — where is the line?')">+ Notes</button></div>
+            </div>
+          </div>
+          <div class="qcard">
+            <div class="vote-col">
+              <div class="vote-up" onclick="vt(this)"><svg viewBox="0 0 14 14"><path d="M7 1l6 6H8v6H6V7H1z"/></svg></div>
+              <div class="vote-n">11</div>
+            </div>
+            <div class="q-body">
+              <div class="q-txt">What are the risks for missionaries using AI translation tools in sensitive access nations?</div>
+              <div class="q-foot"><span class="q-age">5 min ago</span><button class="send-btn-sm" onclick="doSend('q','Risks for missionaries using AI translation in sensitive-access nations?')">+ Notes</button></div>
+            </div>
+          </div>
+          <div class="qcard">
+            <div class="vote-col">
+              <div class="vote-up" onclick="vt(this)"><svg viewBox="0 0 14 14"><path d="M7 1l6 6H8v6H6V7H1z"/></svg></div>
+              <div class="vote-n">6</div>
+            </div>
+            <div class="q-body">
+              <div class="q-txt">Can AI ever have genuine spiritual insight, or only simulate it?</div>
+              <div class="q-foot"><span class="q-age">2 min ago</span><button class="send-btn-sm" onclick="doSend('q','Can AI have genuine spiritual insight, or only simulate it?')">+ Notes</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 AI NOTES -->
+    <div class="panel" id="p-ainotes">
+      <div class="panel-inner">
+        <div class="nc-section">
+          <div class="nc-section-stripe"></div>
+          <div class="nc-section-body">
+            <div class="nc-section-n">Section 02 · 38 min in</div>
+            <div class="nc-section-title">The Theology of Imago Dei in an Age of Artificial Intelligence</div>
+          </div>
+        </div>
+        <div class="nc-story">
+          <div class="nc-story-eye">📖 Story detected</div>
+          <div class="nc-story-title">The GPS That Changed How We Navigate</div>
+          <div class="card-footer">
+            <button class="cf-btn cf-notes" onclick="doSend('note','Story: The GPS That Changed How We Navigate')">+ My Notes</button>
+          </div>
+        </div>
+        <div class="nc-bullets">
+          <div class="nc-bullets-head">Key Points</div>
+          <div class="nc-bullet"><div class="nc-bdot"></div><span>The Imago Dei is not about what we can do — it's about who we are in relation to God</span></div>
+          <div class="nc-bullet"><div class="nc-bdot"></div><span>AI can replicate function but cannot replicate personhood or covenant relationship</span></div>
+          <div class="nc-bullet"><div class="nc-bdot"></div><span>Our unique calling: to be stewards, not just users of creation</span></div>
+          <div class="card-footer">
+            <button class="cf-btn cf-save">🔖 Save</button>
+            <button class="cf-btn cf-notes" onclick="doSend('note','Key Points — Imago Dei is about who we are, not what we do. AI replicates function not personhood. We are stewards.')">+ My Notes</button>
+          </div>
+        </div>
+        <div class="nc-quote">
+          <div class="nc-quote-mark">"</div>
+          <div class="nc-quote-text">The danger is not that AI will become human. The danger is that humans will become more like machines — efficient, productive, and spiritually empty.</div>
+          <div class="card-footer">
+            <button class="cf-btn cf-save">🔖 Save</button>
+            <button class="cf-btn cf-notes" onclick="doSend('note','Quote: \"The danger is not that AI will become human. The danger is that humans will become more like machines.\"')">+ My Notes</button>
+          </div>
+        </div>
+        <div class="nc-scripture">
+          <div class="nc-ref">📖 Genesis 1:27</div>
+          <div class="nc-verse">So God created mankind in his own image, in the image of God he created them; male and female he created them.</div>
+          <div class="card-footer">
+            <button class="cf-btn cf-notes" onclick="doSend('note','Gen 1:27 — So God created mankind in his own image, in the image of God he created them; male and female he created them.')">+ My Notes</button>
+          </div>
+        </div>
+        <div class="nc-concept">
+          <div class="nc-concept-word">Imago Dei</div>
+          <div class="nc-vr"></div>
+          <div class="nc-concept-def">Latin: "Image of God." Humans bear the likeness of God, granting inherent dignity and unique relational capacity that no AI can replicate.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 SLIDE -->
+    <div class="panel" id="p-slide">
+      <div class="panel-inner">
+        <div class="slide-frame">
+          <div class="slide-stage">
+            <div class="slide-inner">
+              <div class="slide-eyebrow">Being Fully Human · Session 3</div>
+              <div class="slide-h">What Makes Us<br>Irreplaceably Human?</div>
+              <div style="font-size:12px;color:rgba(245,245,247,.45);">Five capacities no AI can replicate</div>
+              <div class="slide-pts">
+                <div class="slide-pt">Genuine love and covenant commitment</div>
+                <div class="slide-pt">Creativity rooted in the Imago Dei</div>
+                <div class="slide-pt">Embodied, incarnational presence</div>
+                <div class="slide-pt">Moral agency and spiritual accountability</div>
+              </div>
+            </div>
+          </div>
+          <div class="slide-bar">
+            <span class="slide-num-lbl">12 / 38</span>
+            <div class="slide-prog"><div class="slide-prog-fill"></div></div>
+            <button class="send-btn" style="font-size:10px;padding:4px 10px;" onclick="doSend('slide','📌 Slide 12 — What Makes Us Irreplaceably Human?')">+ Notes</button>
+          </div>
+        </div>
+        <div class="slide-thumbs">
+          <div class="slide-thumb">10</div>
+          <div class="slide-thumb">11</div>
+          <div class="slide-thumb cur">12 ●</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6 MAP -->
+    <div class="panel" id="p-map">
+      <div class="panel-inner">
+        <div class="map-time-hdr">SESSION MAP · 1h 12m elapsed</div>
+        <div class="timeline">
+          <div class="seg teaching">
+            <div class="seg-card">
+              <div class="seg-type">Teaching</div>
+              <div class="seg-title">Introduction: The AI Moment We're In</div>
+              <div class="seg-meta"><span>0:00 — 0:14</span><span>3 notes</span></div>
+            </div>
+          </div>
+          <div class="seg story">
+            <div class="seg-card">
+              <div class="seg-type">Story</div>
+              <div class="seg-title">The GPS That Changed How We Navigate</div>
+              <div class="seg-meta"><span>0:14 — 0:22</span><span>1 note</span></div>
+            </div>
+          </div>
+          <div class="seg teaching">
+            <div class="seg-card">
+              <div class="seg-type">Teaching</div>
+              <div class="seg-title">Imago Dei: What Makes Us Human</div>
+              <div class="seg-meta"><span>0:22 — 0:45</span><span>5 notes</span></div>
+            </div>
+          </div>
+          <div class="seg qa">
+            <div class="seg-card">
+              <div class="seg-type">Q&amp;A</div>
+              <div class="seg-title">Answering: Pastors &amp; AI Literacy</div>
+              <div class="seg-meta"><span>0:45 — 0:58</span><span>14 questions</span></div>
+            </div>
+          </div>
+          <div class="seg teaching now">
+            <div class="seg-card">
+              <div class="seg-type">
+                Teaching
+                <span style="width:5px;height:5px;border-radius:50%;background:var(--teal);display:inline-block;animation:blink 1.5s infinite;margin-left:4px;"></span>
+              </div>
+              <div class="seg-title">Five Irreplaceable Human Capacities</div>
+              <div class="seg-meta"><span>0:58 — now</span><span>2 notes so far</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7 MY NOTES -->
+    <div class="panel" id="p-mine">
+      <div class="panel-inner">
+        <div class="fmt-bar">
+          <button class="fb on" title="Bold">B</button>
+          <button class="fb" title="Italic" style="font-style:italic">I</button>
+          <button class="fb" title="Underline" style="text-decoration:underline">U</button>
+          <button class="fb" title="Highlight" style="font-size:14px">◌</button>
+          <div class="fbr"></div>
+          <button class="fb" title="Heading" style="font-size:11px;font-weight:800">H₁</button>
+          <button class="fb" title="Bullets" style="font-size:14px;letter-spacing:-.05em">≡</button>
+          <button class="fb" title="Quote" style="font-family:'Fraunces',serif;font-size:16px">"</button>
+          <div class="fbr"></div>
+          <button class="fb" style="font-size:14px" title="Undo">↩</button>
+        </div>
+        <div class="notes-editor" contenteditable="true" id="ned"
+             data-ph="Your notes for this session…"
+             oninput="noteInput()"></div>
+        <div id="clipsArea">
+          <div class="clip from-q" id="c1">
+            <button class="clip-x" onclick="rmClip('c1')">×</button>
+            <div class="clip-src">❓ Questions · 12 min ago</div>
+            <div class="clip-txt">How do we help church communities navigate AI when most pastors don't understand it yet? (23 votes)</div>
+          </div>
+          <div class="clip from-note" id="c2">
+            <button class="clip-x" onclick="rmClip('c2')">×</button>
+            <div class="clip-src">✦ AI Notes · 4 min ago</div>
+            <div class="clip-txt">"The danger is not that AI will become human. The danger is that humans will become more like machines."</div>
+          </div>
+        </div>
+        <div class="export-row">
+          <button class="exp-btn exp-copy" onclick="toast('Copied to clipboard ✓')">📋 Copy</button>
+          <button class="exp-btn exp-pdf" onclick="toast('Exporting PDF…')">⬇ Export PDF</button>
+          <button class="exp-btn exp-md" onclick="toast('Downloaded notes.md')">MD</button>
+        </div>
+        <div class="save-line" id="saveHint">Auto-saved 3s ago</div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- REACTIONS -->
+  <div class="reactions-strip">
+    <button class="react-pill" onclick="react('🔥',this)"><span class="react-emoji">🔥</span><span class="react-num">42</span></button>
+    <button class="react-pill" onclick="react('👏',this)"><span class="react-emoji">👏</span><span class="react-num">28</span></button>
+    <button class="react-pill" onclick="react('🤔',this)"><span class="react-emoji">🤔</span><span class="react-num">7</span></button>
+    <button class="react-pill" onclick="react('❓',this)"><span class="react-emoji">❓</span><span class="react-num">3</span></button>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tabbar">
+    <button class="tab active" data-t="cloud" onclick="go('cloud',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><path d="M17.5 19H9a7 7 0 110-14 7 7 0 016.71 5H17.5a4.5 4.5 0 010 9z"/></svg></div>
+      <span class="tab-lbl">Cloud</span>
+    </button>
+    <button class="tab" data-t="live" onclick="go('live',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+      <span class="tab-lbl">Live</span>
+    </button>
+    <button class="tab" data-t="qa" onclick="go('qa',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg></div>
+      <span class="tab-lbl">Q&A</span>
+    </button>
+    <button class="tab" data-t="ainotes" onclick="go('ainotes',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <span class="tab-lbl">Notes</span>
+    </button>
+    <button class="tab" data-t="slide" onclick="go('slide',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+      <span class="tab-lbl">Slide</span>
+    </button>
+    <button class="tab" data-t="map" onclick="go('map',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
+      <span class="tab-lbl">Map</span>
+    </button>
+    <button class="tab" data-t="mine" onclick="go('mine',this)">
+      <div class="tab-ic"><svg viewBox="0 0 24 24" stroke-width="1.6" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+      <span class="tab-lbl">Mine</span>
+    </button>
+  </div>
+
+</div><!-- /phone -->
+</div><!-- /wrap -->
+
+<script>
+/* ── NAVIGATION ──────────────────────────────────────── */
+const panels = {cloud:'p-cloud',live:'p-live',qa:'p-qa',ainotes:'p-ainotes',slide:'p-slide',map:'p-map',mine:'p-mine'};
+function go(id, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(panels[id]).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ── SEGMENT CONTROL ─────────────────────────────────── */
+function segOn(btn) {
+  const par = btn.closest('.seg-ctrl');
+  par.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+/* ── WORD CLOUD ──────────────────────────────────────── */
+const WDS = [
+  {t:'Kingdom',s:40,x:50,y:44,c:'theology'},
+  {t:'AI',s:52,x:26,y:22,c:'concept'},
+  {t:'Human',s:36,x:63,y:62,c:'concept'},
+  {t:'Discipleship',s:22,x:12,y:66,c:'theology'},
+  {t:'Technology',s:26,x:58,y:18,c:'general'},
+  {t:'YWAM',s:20,x:74,y:38,c:'name'},
+  {t:'Future',s:18,x:32,y:78,c:'general'},
+  {t:'Story',s:22,x:80,y:70,c:'general'},
+  {t:'Creation',s:16,x:9,y:38,c:'theology'},
+  {t:'Mission',s:20,x:42,y:10,c:'theology'},
+  {t:'Church',s:18,x:84,y:28,c:'name'},
+  {t:'Image',s:16,x:20,y:52,c:'concept'},
+  {t:'Imago Dei',s:28,x:52,y:86,c:'theology'},
+  {t:'God',s:32,x:38,y:50,c:'theology'},
+  {t:'Ethics',s:14,x:72,y:82,c:'concept'},
+];
+(function buildCloud(){
+  const c=document.getElementById('cloudCanvas');
+  WDS.forEach((w,i)=>{
+    const el=document.createElement('span');
+    el.className='cw '+w.c;
+    el.textContent=w.t;
+    el.style.cssText=`font-size:${w.s}px;left:${w.x}%;top:${w.y}%;animation-delay:${i*35}ms;`;
+    c.appendChild(el);
+  });
+})();
+
+/* ── SUBTITLES ───────────────────────────────────────── */
+let subSz=15;
+function subFont(d){ subSz=Math.max(12,Math.min(20,subSz+d)); document.querySelectorAll('.sub-line').forEach(l=>l.style.fontSize=subSz+'px'); }
+const newLines=[
+  "The five capacities I want to walk through — love, creativity, embodiment, moral agency, and spiritual fellowship.",
+  "When we talk about creativity rooted in the Imago Dei, we're saying something profound about what it means to make.",
+  "God made us makers. That's not just a function. That's identity.",
+  "The question for your ministry: how do you help your people understand this distinction?",
+];
+let li=0;
+setInterval(()=>{
+  const box=document.getElementById('subLines');
+  const cur=box.querySelector('.now');
+  if(cur) cur.classList.remove('now');
+  const ln=document.createElement('div');
+  ln.className='sub-line now';
+  ln.innerHTML=newLines[li%newLines.length]+`<span class="line-action"><button class="send-btn-sm" onclick="doSend('sub','${newLines[li%newLines.length].replace(/'/g,"\\'")}')">+ Notes</button></span>`;
+  box.appendChild(ln);
+  if(box.children.length>5) box.removeChild(box.children[0]);
+  li++;
+  if(document.getElementById('p-live').classList.contains('active')) box.scrollTop=box.scrollHeight;
+},6000);
+
+/* ── Q&A ─────────────────────────────────────────────── */
+function qSort(m,btn){ document.querySelectorAll('#p-qa .seg-btn').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
+function vt(el){
+  const on=el.classList.toggle('on');
+  const n=el.nextElementSibling;
+  let v=parseInt(n.textContent);
+  n.textContent=on?v+1:v-1;
+  n.style.transform='scale(1.4)';
+  setTimeout(()=>n.style.transform='',180);
+  n.classList.toggle('hot',on);
+}
+function submitQ(){
+  const f=document.getElementById('askField');
+  const txt=f.value.trim(); if(!txt) return;
+  const list=document.getElementById('qList');
+  const card=document.createElement('div');
+  card.className='qcard';
+  card.innerHTML=`<div class="vote-col"><div class="vote-up" onclick="vt(this)"><svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 1l6 6H8v6H6V7H1z"/></svg></div><div class="vote-n">1</div></div><div class="q-body"><div class="q-txt">${txt}</div><div class="q-foot"><span class="q-age">just now</span><button class="send-btn-sm" onclick="doSend('q','${txt.replace(/'/g,"\\'")}')">+ Notes</button></div></div>`;
+  list.appendChild(card);
+  f.value='';
+  const t=document.getElementById('qtally');
+  t.textContent=(parseInt(t.textContent)+1)+' questions';
+  toast('Question sent ✓');
+}
+
+/* ── SEND TO NOTES ───────────────────────────────────── */
+const SRC={
+  sub:  {lbl:'💬 Live Subtitles',cls:'from-sub'},
+  q:    {lbl:'❓ Questions',cls:'from-q'},
+  note: {lbl:'✦ AI Notes',cls:'from-note'},
+  slide:{lbl:'🖼 Slide',cls:'from-slide'},
+  cloud:{lbl:'☁ Word Cloud',cls:'from-sub'},
+};
+function doSend(src, txt){
+  const s=SRC[src]||SRC.sub;
+  const id='cl'+Date.now();
+  const div=document.createElement('div');
+  div.className=`clip ${s.cls}`;
+  div.id=id;
+  div.innerHTML=`<button class="clip-x" onclick="rmClip('${id}')">×</button><div class="clip-src">${s.lbl} · just now</div><div class="clip-txt">${txt}</div>`;
+  div.style.cssText='opacity:0;transform:translateY(-6px);transition:all .25s ease-out;';
+  const area=document.getElementById('clipsArea');
+  area.insertBefore(div,area.firstChild);
+  requestAnimationFrame(()=>{ div.style.opacity='1'; div.style.transform='none'; });
+  toast('Sent to My Notes ✓');
+  setTimeout(()=>{ go('mine',document.querySelector('[data-t="mine"]')); },700);
+}
+function rmClip(id){
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.style.opacity='0'; el.style.transform='translateX(10px)';
+  setTimeout(()=>el.remove(),220);
+}
+
+/* ── REACTIONS ───────────────────────────────────────── */
+function react(e,btn){
+  const n=btn.querySelector('.react-num');
+  n.textContent=parseInt(n.textContent)+1;
+  const f=document.getElementById('floats');
+  const em=document.createElement('span');
+  em.className='fem';
+  em.textContent=e;
+  em.style.right=(20+Math.random()*40)+'px';
+  f.appendChild(em);
+  setTimeout(()=>em.remove(),1500);
+  btn.style.transform='scale(1.2)';
+  setTimeout(()=>btn.style.transform='',130);
+}
+
+/* ── MY NOTES ────────────────────────────────────────── */
+let saveTm;
+function noteInput(){
+  const h=document.getElementById('saveHint');
+  h.style.color='var(--jade)'; h.textContent='Saving…';
+  clearTimeout(saveTm);
+  saveTm=setTimeout(()=>{ h.style.color=''; h.textContent='Auto-saved just now'; },1100);
+}
+setInterval(()=>{
+  const h=document.getElementById('saveHint');
+  if(h.textContent.startsWith('Auto-saved just')) h.textContent='Auto-saved 5s ago';
+},5000);
+
+/* ── TOAST ───────────────────────────────────────────── */
+let toastTm;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('on');
+  clearTimeout(toastTm);
+  toastTm=setTimeout(()=>el.classList.remove('on'),2400);
+}
+</script>
+</body>
+</html>
