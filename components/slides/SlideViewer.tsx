@@ -3,22 +3,24 @@
 import { SlideFullscreenView } from "@/components/slides/SlideFullscreenView";
 import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { useLocale } from "@/hooks/useMineNotes";
+import { isLandscape, isMobilePhone } from "@/lib/device/ios";
 import { useSession } from "@/lib/session/context";
 import { cn } from "@/lib/utils";
 import { Captions, Maximize2 } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface SlideViewerProps {
   readOnly?: boolean;
 }
 
-/** Student view: current live slide — 95% of content height, subtitles at bottom. */
+/** Student view: current live slide — immersive overlay on phone landscape. */
 export function SlideViewer({ readOnly }: SlideViewerProps) {
   const { slides, subtitles, isTabLiveActive } = useSession();
   const { locale, setLocale } = useLocale();
   const [fullscreen, setFullscreen] = useState(false);
   const [subtitlesOn, setSubtitlesOn] = useState(true);
+  const autoLandscapeRef = useRef(false);
 
   const index = Math.max(0, Math.min(slides.current - 1, slides.total - 1));
   const current = slides.images[index] ?? slides.images[0];
@@ -37,11 +39,49 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
       : currentLine.translations[locale] ?? currentLine.textEn
     : null;
 
-  const closeFullscreen = useCallback(() => setFullscreen(false), []);
+  const openFullscreen = useCallback(() => {
+    setFullscreen(true);
+  }, []);
+
+  const closeFullscreen = useCallback(() => {
+    autoLandscapeRef.current = false;
+    setFullscreen(false);
+  }, []);
+
+  /** On phones, rotating to landscape opens the immersive slide view. */
+  useEffect(() => {
+    if (!isMobilePhone()) return;
+
+    const sync = () => {
+      if (isLandscape()) {
+        autoLandscapeRef.current = true;
+        setFullscreen(true);
+      } else if (autoLandscapeRef.current) {
+        autoLandscapeRef.current = false;
+        setFullscreen(false);
+      }
+    };
+
+    sync();
+    const mq = window.matchMedia("(orientation: landscape)");
+    mq.addEventListener("change", sync);
+    window.addEventListener("orientationchange", sync);
+
+    return () => {
+      mq.removeEventListener("change", sync);
+      window.removeEventListener("orientationchange", sync);
+    };
+  }, []);
 
   return (
     <>
-      <div className="absolute inset-0 overflow-hidden">
+      <div
+        className={cn(
+          "absolute inset-0 overflow-hidden",
+          fullscreen && "invisible"
+        )}
+        aria-hidden={fullscreen}
+      >
         <div
           className={cn(
             "flex h-full w-full items-center justify-center",
@@ -56,7 +96,6 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
           />
         </div>
 
-        {/* Top-right: caption toggle + language */}
         <div className="absolute right-2 top-2 z-20 flex items-center gap-1.5 sm:right-3 sm:top-3">
           {subtitlesOn && (
             <LanguagePicker locale={locale} onChange={setLocale} />
@@ -77,7 +116,7 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
           </button>
           <button
             type="button"
-            onClick={() => setFullscreen(true)}
+            onClick={openFullscreen}
             aria-label="Fullscreen"
             className={cn(
               "rounded-full bg-surface/95 p-2 shadow-card ring-1 ring-border transition-colors",
@@ -88,7 +127,6 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
           </button>
         </div>
 
-        {/* Bottom: subtitle text when enabled (overlays slide, no layout gap) */}
         {subtitlesOn && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background from-40% via-background/80 to-transparent px-4 pb-3 pt-6">
             <div className="pointer-events-auto mx-auto max-w-3xl text-center">

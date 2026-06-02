@@ -1,11 +1,9 @@
 "use client";
 
 import { LanguagePicker } from "@/components/live/LanguagePicker";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useLocale } from "@/hooks/useMineNotes";
-import {
-  isIOS,
-  supportsElementFullscreen,
-} from "@/lib/device/ios";
+import { isIOS, supportsElementFullscreen } from "@/lib/device/ios";
 import { cn } from "@/lib/utils";
 import type { SubtitleLine } from "@/types/session";
 import { Captions, Minimize2 } from "lucide-react";
@@ -63,8 +61,10 @@ export function SlideFullscreenView({
   const onCloseRef = useRef(onClose);
   const intentionalExitRef = useRef(false);
   const nativeFsActiveRef = useRef(false);
+  const viewport = useVisualViewport();
   const { locale, setLocale } = useLocale();
-  const [subtitlesOn, setSubtitlesOn] = useState(isIOS());
+  const [subtitlesOn, setSubtitlesOn] = useState(false);
+  const [chromeHidden, setChromeHidden] = useState(false);
 
   onCloseRef.current = onClose;
 
@@ -150,56 +150,73 @@ export function SlideFullscreenView({
     };
   }, []);
 
+  /** Tap slide area to tuck Safari UI (scroll window slightly). */
+  const nudgeSafariChrome = useCallback(() => {
+    if (!isIOS()) return;
+    window.scrollTo(0, 1);
+    setTimeout(() => window.scrollTo(0, 0), 50);
+    setChromeHidden(true);
+  }, []);
+
+  const controlsHeight = subtitlesOn ? 88 : 48;
+  const slideHeight = Math.max(viewport.height - controlsHeight, 120);
+
   return (
     <div
       ref={containerRef}
-      className={cn(
-        "fixed inset-0 z-[9999] flex flex-col bg-[#F7F5F2]",
-        "h-[100dvh] min-h-[100dvh] w-full max-w-[100vw]",
-        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-        "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
-      )}
+      className="fixed z-[9999] flex flex-col overflow-hidden bg-[#F7F5F2]"
+      style={{
+        top: viewport.offsetTop,
+        left: viewport.offsetLeft,
+        width: viewport.width,
+        height: viewport.height,
+      }}
       role="dialog"
       aria-modal="true"
       aria-label="Slide fullscreen view"
     >
-      <div className="relative flex min-h-0 flex-1 flex-col">
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 items-center justify-center",
-            subtitlesOn && "pb-1"
-          )}
-        >
+      <button
+        type="button"
+        className="relative flex min-h-0 flex-1 flex-col border-0 bg-transparent p-0"
+        onClick={nudgeSafariChrome}
+        aria-label="Show slide"
+      >
+        <div className="flex min-h-0 flex-1 items-center justify-center px-1">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={slideSrc}
             alt="Current slide"
-            className="max-h-full max-w-full object-contain"
+            className="h-full w-full object-contain"
             style={{
-              maxHeight: subtitlesOn
-                ? "calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 7rem)"
-                : "calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 3.5rem)",
+              maxHeight: slideHeight,
+              maxWidth: viewport.width,
             }}
           />
         </div>
 
-        {subtitlesOn && (
-          <div className="shrink-0 px-4 pb-4 pt-2">
-            {subtitleText ? (
-              <p className="text-center text-base leading-relaxed text-foreground">
-                {subtitleText}
-              </p>
-            ) : (
-              <p className="text-center text-sm text-muted">
-                Subtitles will appear when the session is live.
-              </p>
-            )}
+        {subtitlesOn && subtitleText && (
+          <div className="shrink-0 px-3 pb-2 pt-1">
+            <p className="line-clamp-2 text-center text-sm leading-snug text-foreground">
+              {subtitleText}
+            </p>
           </div>
         )}
-      </div>
+      </button>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/95 to-transparent px-3 pb-6 pt-[max(0.5rem,env(safe-area-inset-top))]">
-        <div className="pointer-events-auto flex items-center justify-end gap-2">
+      <div
+        className={cn(
+          "absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-2 px-2",
+          "bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/95 to-transparent",
+          "pb-2 pt-[max(0.25rem,env(safe-area-inset-top))]"
+        )}
+      >
+        {isIOS() && !chromeHidden && (
+          <p className="max-w-[55%] text-[10px] leading-tight text-muted">
+            Tap slide to hide Safari bars · exit with{" "}
+            <span className="whitespace-nowrap">↙ button</span>
+          </p>
+        )}
+        <div className="ml-auto flex items-center gap-1">
           {subtitlesOn && (
             <LanguagePicker locale={locale} onChange={setLocale} />
           )}
@@ -221,7 +238,7 @@ export function SlideFullscreenView({
             type="button"
             onClick={() => void handleClose()}
             aria-label="Exit fullscreen"
-            className="rounded-md p-2.5 text-muted transition-colors hover:bg-surface hover:text-foreground"
+            className="rounded-md bg-surface p-2.5 text-foreground shadow-card ring-1 ring-border"
           >
             <Minimize2 className="h-5 w-5" />
           </button>
