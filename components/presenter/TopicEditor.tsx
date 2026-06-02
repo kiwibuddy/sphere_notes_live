@@ -2,7 +2,9 @@
 
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { TeachingDayPicker } from "@/components/presenter/TeachingDayPicker";
 import { useSession } from "@/lib/session/context";
+import { formatTeachingDayLine } from "@/lib/session/day-label";
 import {
   isoToSessionDateDisplay,
   parseSessionDateToIso,
@@ -175,7 +177,7 @@ export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
         placeholder="e.g. Biblical Worldview"
       />
       <EditableField
-        label="Day topic"
+        label={`Topic for day ${meta.currentDay}`}
         value={day.topic}
         onSave={(topic) => setDayTopic(meta.currentDay, topic)}
         placeholder="e.g. Creation & Fall"
@@ -198,6 +200,7 @@ export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
           archive.
         </p>
         <div className="mt-4">{content}</div>
+        <TeachingDayPicker />
       </div>
     );
   }

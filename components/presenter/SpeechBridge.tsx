@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SessionConnectionScreen } from "@/components/setup/SessionConnectionScreen";
 import { ensureSupabaseAuth } from "@/lib/session/ensure-auth";
+import { formatTeachingDayCaption, formatTeachingDayLine } from "@/lib/session/day-label";
 import { useSession } from "@/lib/session/context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
@@ -218,8 +219,11 @@ export function SpeechBridge() {
             Mac speech bridge
           </p>
           <h1 className="font-display text-2xl text-foreground">{meta.title}</h1>
-          <p className="mt-1 text-sm text-muted">
-            Day {activeDay}: {dayInfo.topic}
+          <p className="mt-1 text-sm font-medium text-foreground">
+            {formatTeachingDayCaption(activeDay, dayInfo, meta.totalDays)}
+          </p>
+          <p className="mt-0.5 text-xs text-muted">
+            {formatTeachingDayLine(activeDay, dayInfo)}
           </p>
           <p className="mt-3 text-xs text-muted">
             Keep this tab open in <strong>Chrome</strong> on your MacBook while

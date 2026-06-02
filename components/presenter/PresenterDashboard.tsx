@@ -19,6 +19,7 @@ const PresenterJoinPanel = dynamic(
   }
 );
 import { PresenterSettingsModal } from "@/components/presenter/PresenterSettingsModal";
+import { formatTeachingDayLine } from "@/lib/session/day-label";
 import { useSession } from "@/lib/session/context";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
@@ -85,7 +86,7 @@ export function PresenterDashboard() {
                 {meta.title}
               </h1>
               <p className="mt-1 text-sm text-muted md:text-base">
-                {dayInfo.topic} · {dayInfo.date}
+                {formatTeachingDayLine(meta.currentDay, dayInfo)}
               </p>
               <p className="mt-2 text-xs text-muted">
                 Slide {slides.current} of {slides.total}
