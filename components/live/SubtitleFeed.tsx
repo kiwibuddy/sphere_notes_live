@@ -87,10 +87,16 @@ export function SubtitleFeed({
       className={cn(
         "min-h-0 flex-1 overflow-y-auto overflow-x-hidden",
         "overscroll-y-contain [-webkit-overflow-scrolling:touch]",
+        "scroll-pb-[max(5rem,env(safe-area-inset-bottom,0px)+4rem)] max-md:scroll-pb-40",
         className
       )}
     >
-      <div className="flex min-h-full flex-col justify-end gap-3 px-1 py-4 pb-8">
+      <div
+        className={cn(
+          "flex min-h-full flex-col justify-end gap-3 px-1 pt-4",
+          "pb-[max(5.5rem,calc(env(safe-area-inset-bottom,0px)+4.5rem))] max-md:pb-40"
+        )}
+      >
         <AnimatePresence initial={false} mode="popLayout">
           {lines.map((line) => {
             const text =
@@ -110,6 +116,11 @@ export function SubtitleFeed({
             );
           })}
         </AnimatePresence>
+        {/* Keeps the latest bubble off the bottom edge when scrolled to end */}
+        <div
+          aria-hidden
+          className="min-h-[3rem] shrink-0 sm:min-h-[2rem]"
+        />
       </div>
     </div>
   );
