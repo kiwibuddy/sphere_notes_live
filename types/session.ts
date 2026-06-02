@@ -189,7 +189,6 @@ export interface SessionContextValue {
 export type SupportedLocale =
   | "en"
   | "nb"
-  | "nn"
   | "sv"
   | "da"
   | "fi"
@@ -199,8 +198,7 @@ export type SupportedLocale =
 
 export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: "English",
-  nb: "Norsk (Bokmål)",
-  nn: "Norsk (Nynorsk)",
+  nb: "Norsk",
   sv: "Svenska",
   da: "Dansk",
   fi: "Suomi",

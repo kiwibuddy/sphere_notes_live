@@ -5,7 +5,6 @@ export function toGoogleTranslateCode(locale: SupportedLocale): string | null {
   if (locale === "en") return null;
   const map: Record<Exclude<SupportedLocale, "en">, string> = {
     nb: "no",
-    nn: "no",
     sv: "sv",
     da: "da",
     fi: "fi",
