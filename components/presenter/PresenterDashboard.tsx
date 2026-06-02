@@ -19,6 +19,7 @@ const PresenterJoinPanel = dynamic(
   }
 );
 import { PresenterSettingsModal } from "@/components/presenter/PresenterSettingsModal";
+import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import { formatSessionHeader } from "@/lib/session/day-label";
 import { useSession } from "@/lib/session/context";
 import { cn } from "@/lib/utils";
@@ -217,14 +218,21 @@ export function PresenterDashboard() {
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-3">
-              <ProjectorButton
-                icon={Cloud}
-                label="Word cloud"
-                description="Live words from your teaching"
-                active={displayMode === "wordcloud"}
-                onClick={() => setDisplay("wordcloud")}
-              />
+            <div
+              className={cn(
+                "grid gap-2",
+                WORD_CLOUD_UI_ENABLED ? "sm:grid-cols-3" : "sm:grid-cols-2"
+              )}
+            >
+              {WORD_CLOUD_UI_ENABLED && (
+                <ProjectorButton
+                  icon={Cloud}
+                  label="Word cloud"
+                  description="Live words from your teaching"
+                  active={displayMode === "wordcloud"}
+                  onClick={() => setDisplay("wordcloud")}
+                />
+              )}
               <ProjectorButton
                 icon={MessageCircleQuestion}
                 label="Top question"

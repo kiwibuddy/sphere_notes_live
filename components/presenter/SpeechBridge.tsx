@@ -9,12 +9,14 @@ import {
   formatSessionDateLine,
   formatSessionTitle,
 } from "@/lib/session/day-label";
+import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { useSession } from "@/lib/session/context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
 import { SpeechRecognizer } from "@/lib/speech";
 import { sanitizeSpeechText } from "@/lib/speech/sanitize";
+import { startNoteExtraction } from "@/lib/notes/extract-notes";
 import { enqueueSubtitleCorrection } from "@/lib/speech/enqueue-correction";
 import { SubtitlePusher } from "@/lib/speech/push-subtitles";
 import type { WordcloudWordsRecord } from "@/lib/wordcloud/ingest";
@@ -74,21 +76,24 @@ export function SpeechBridge() {
 
   const loadSubtitlesFromDb = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    const [{ data, error }, { data: wordRow, error: wordError }] =
-      await Promise.all([
-        supabase
-          .from("day_subtitles")
-          .select("lines, full_transcript")
-          .eq("event_id", joinEventId)
-          .eq("day", LIVE_SYNC_DAY)
-          .maybeSingle(),
-        supabase
+    const subtitleRes = await supabase
+      .from("day_subtitles")
+      .select("lines, full_transcript")
+      .eq("event_id", joinEventId)
+      .eq("day", LIVE_SYNC_DAY)
+      .maybeSingle();
+
+    const wordRes = WORD_CLOUD_UI_ENABLED
+      ? await supabase
           .from("day_wordcloud")
           .select("words")
           .eq("event_id", joinEventId)
           .eq("day", LIVE_SYNC_DAY)
-          .maybeSingle(),
-      ]);
+          .maybeSingle()
+      : { data: null, error: null };
+
+    const { data, error } = subtitleRes;
+    const { data: wordRow, error: wordError } = wordRes;
 
     if (error) {
       setPushError(error.message);
@@ -108,9 +113,11 @@ export function SpeechBridge() {
     const current = lines.find((l) => l.isCurrent);
     setLastPreview(current?.textEn ?? lines.at(-1)?.textEn ?? "");
 
-    wordcloudPusherRef.current?.load(
-      wordRow?.words as WordcloudWordsRecord | undefined
-    );
+    if (WORD_CLOUD_UI_ENABLED) {
+      wordcloudPusherRef.current?.load(
+        wordRow?.words as WordcloudWordsRecord | undefined
+      );
+    }
   }, [joinEventId]);
 
   useEffect(() => {
@@ -143,17 +150,31 @@ export function SpeechBridge() {
       () => LIVE_SYNC_DAY,
       (msg) => setPushError(msg)
     );
-    wordcloudPusherRef.current = new WordcloudPusher(
-      joinEventId,
-      () => LIVE_SYNC_DAY,
-      (msg) => setPushError(msg)
-    );
+    if (WORD_CLOUD_UI_ENABLED) {
+      wordcloudPusherRef.current = new WordcloudPusher(
+        joinEventId,
+        () => LIVE_SYNC_DAY,
+        (msg) => setPushError(msg)
+      );
+    }
     void loadSubtitlesFromDb();
     return () => {
       pusherRef.current?.dispose();
       wordcloudPusherRef.current?.dispose();
     };
   }, [joinEventId, loadSubtitlesFromDb]);
+
+  useEffect(() => {
+    if (!sessionReady || !authOk || meta.status !== "live") return;
+
+    return startNoteExtraction({
+      eventId: joinEventId,
+      day: LIVE_SYNC_DAY,
+      getStatus: () => statusRef.current,
+      getTranscript: () => writerRef.current.fullTranscript,
+      onError: (msg) => setPushError(msg),
+    });
+  }, [sessionReady, authOk, meta.status, joinEventId]);
 
   const stopRecognizer = useCallback(() => {
     recognizerRef.current?.stop();
@@ -182,9 +203,11 @@ export function SpeechBridge() {
           writerRef.current.lines.find((l) => l.id === finalizedLineId) ??
           writerRef.current.lines.filter((l) => !l.isCurrent).at(-1);
 
-        const speechForCloud = line?.rawTextEn ?? safe.trim();
-        if (speechForCloud) {
-          wordcloudPusherRef.current?.ingestFinal(speechForCloud);
+        if (WORD_CLOUD_UI_ENABLED) {
+          const speechForCloud = line?.rawTextEn ?? safe.trim();
+          if (speechForCloud) {
+            wordcloudPusherRef.current?.ingestFinal(speechForCloud);
+          }
         }
 
         if (line?.rawTextEn) {
@@ -195,7 +218,8 @@ export function SpeechBridge() {
             },
             pusherRef.current,
             line.id,
-            line.rawTextEn
+            line.rawTextEn,
+            (msg) => setPushError(msg)
           );
         }
       });

@@ -3,6 +3,8 @@
 import { WaitingOverlay } from "@/components/layout/SessionHeader";
 import { WordCloudCanvas } from "@/components/notes/WordCloudCanvas";
 import { useSendToMine } from "@/hooks/useSendToMine";
+import { useStudentPathBuilder } from "@/hooks/useStudentHref";
+import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import { useSession } from "@/lib/session/context";
 import {
   entryCount,
@@ -13,11 +15,20 @@ import { wordCloudLimitForMode } from "@/lib/wordcloud/sizes";
 import type { WordCloudMode } from "@/types/session";
 import { cn } from "@/lib/utils";
 import { RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function CloudNotesPage() {
+  const router = useRouter();
+  const studentPath = useStudentPathBuilder();
   const { wordcloudEntries, meta, isTabLiveActive, joinEventId } = useSession();
   const sendToMine = useSendToMine();
+
+  useEffect(() => {
+    if (!WORD_CLOUD_UI_ENABLED) {
+      router.replace(studentPath("/student/notes/auto"));
+    }
+  }, [router, studentPath]);
   const [mode, setMode] = useState<WordCloudMode>("live");
   const [liveSince, setLiveSince] = useState(() => Date.now());
   const isLive = isTabLiveActive("notes");
@@ -56,6 +67,10 @@ export default function CloudNotesPage() {
   );
 
   const shownCount = Math.min(totalInView, limit);
+
+  if (!WORD_CLOUD_UI_ENABLED) {
+    return null;
+  }
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">

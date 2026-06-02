@@ -3,12 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useStudentPathBuilder } from "@/hooks/useStudentHref";
+import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import { cn } from "@/lib/utils";
 
 const subTabs = [
   { href: "/student/notes/auto", label: "Auto" },
   { href: "/student/notes/mine", label: "Mine" },
-  { href: "/student/notes/cloud", label: "Cloud" },
+  ...(WORD_CLOUD_UI_ENABLED
+    ? [{ href: "/student/notes/cloud" as const, label: "Cloud" }]
+    : []),
   { href: "/student/notes/overview", label: "Overview" },
 ];
 

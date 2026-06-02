@@ -1,26 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
 import { useSession } from "@/lib/session/context";
-import { filterWordcloud } from "@/lib/wordcloud/entries";
-import { WordCloudCanvas } from "@/components/notes/WordCloudCanvas";
 
 export function DisplayView() {
   const {
     displayMode,
     displayQuote,
     displayQuestion,
-    wordcloudEntries,
     meta,
     getSessionInfo,
   } = useSession();
 
   const session = getSessionInfo();
-
-  const wordcloud = useMemo(
-    () => filterWordcloud(wordcloudEntries, "session"),
-    [wordcloudEntries]
-  );
 
   if (displayMode === "idle" || meta.status === "waiting") {
     return (
@@ -31,19 +22,6 @@ export function DisplayView() {
             {session.topic} · {session.date}
           </p>
           <p className="mt-4 text-sm text-muted">SphereNotes Live · Display</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (displayMode === "wordcloud") {
-    return (
-      <div className="flex min-h-dvh flex-col bg-[#F7F5F2] p-12">
-        <h2 className="mb-8 text-center font-display text-3xl text-foreground">
-          {meta.title}
-        </h2>
-        <div className="min-h-[60vh] flex-1">
-          <WordCloudCanvas words={wordcloud} mode="session" />
         </div>
       </div>
     );

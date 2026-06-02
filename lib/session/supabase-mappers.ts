@@ -1,3 +1,4 @@
+import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type {
   DayInfo,
@@ -145,8 +146,12 @@ export function displayModeFromRow(row: {
   quote: string;
   question: { id: string; text: string; votes: number } | null;
 } {
+  let mode = row.mode as DisplayMode;
+  if (!WORD_CLOUD_UI_ENABLED && mode === "wordcloud") {
+    mode = "idle";
+  }
   return {
-    mode: row.mode as DisplayMode,
+    mode,
     quote: row.quote_text ?? "",
     question:
       row.question_id && row.question_text

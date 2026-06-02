@@ -43,6 +43,7 @@ import {
   mapSubtitleLines,
   mapWordcloudJson,
 } from "@/lib/session/supabase-mappers";
+import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import { resetWordcloudForDay } from "@/lib/wordcloud/simulation";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type { Json } from "@/lib/supabase/database.types";
@@ -940,6 +941,9 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
 
   const setDisplay = useCallback(
     async (mode: DisplayMode, payload?: DisplayPayload) => {
+      if (!WORD_CLOUD_UI_ENABLED && mode === "wordcloud") {
+        mode = "idle";
+      }
       setDisplayModeState(mode);
       let quote = displayQuote;
       let question = displayQuestion;
