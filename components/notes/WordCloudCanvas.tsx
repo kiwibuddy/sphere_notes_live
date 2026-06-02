@@ -1,14 +1,12 @@
 "use client";
 
 import { SendToMineButton } from "@/components/cards/SendToMineButton";
-import type { WordCloudWord } from "@/types/session";
-import type { WordCloudMode } from "@/types/session";
 import { captureWordCloudSnapshot } from "@/lib/wordcloud/capture";
-import {
-  drawWordCloud,
-  layoutWordCloud,
-} from "@/lib/wordcloud/layout";
-import { useEffect, useRef, useState } from "react";
+import { categoryColor } from "@/lib/wordcloud/layout";
+import { sizeWordCloud } from "@/lib/wordcloud/sizes";
+import type { WordCloudMode, WordCloudWord } from "@/types/session";
+import { cn } from "@/lib/utils";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export interface WordCloudSendPayload {
   text: string;
@@ -25,15 +23,12 @@ export function WordCloudCanvas({
   words,
   onSendToMine,
 }: WordCloudCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pulseWord, setPulseWord] = useState<string | null>(null);
-  const [pulsePhase, setPulsePhase] = useState(0);
   const prevCountsRef = useRef<Map<string, number>>(new Map());
 
-  const topWords = words
-    .slice()
-    .sort((a, b) => b.count - a.count)
+  const sizedWords = useMemo(() => sizeWordCloud(words, 50), [words]);
+
+  const topWords = sizedWords
     .slice(0, 12)
     .map((w) => w.word)
     .join(" · ");
@@ -59,66 +54,40 @@ export function WordCloudCanvas({
 
     if (bumped) {
       setPulseWord(bumped);
-      const start = performance.now();
-      const animate = (now: number) => {
-        const t = (now - start) / 600;
-        if (t >= 1) {
-          setPulseWord(null);
-          return;
-        }
-        setPulsePhase(t);
-        requestAnimationFrame(animate);
-      };
-      requestAnimationFrame(animate);
+      const t = window.setTimeout(() => setPulseWord(null), 600);
+      return () => window.clearTimeout(t);
     }
   }, [words]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas) return;
-
-    const render = () => {
-      const rect = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const w = Math.floor(rect.width);
-      const h = Math.floor(rect.height);
-      if (w <= 0 || h <= 0) return;
-
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = `${w}px`;
-      canvas.style.height = `${h}px`;
-
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      const placed = layoutWordCloud(words, w, h, ctx);
-      drawWordCloud(ctx, placed, pulseWord, pulsePhase, w, h);
-    };
-
-    render();
-    const ro = new ResizeObserver(render);
-    ro.observe(container);
-    return () => ro.disconnect();
-  }, [words, pulseWord, pulsePhase]);
 
   return (
     <div className="flex h-full min-h-[280px] flex-col md:min-h-[360px]">
       <div
-        ref={containerRef}
-        className="relative min-h-0 flex-1 rounded-xl bg-gradient-to-br from-background via-surface/30 to-background"
+        className="relative min-h-0 flex-1 overflow-y-auto rounded-xl bg-gradient-to-br from-background via-surface/30 to-background p-4 md:p-6"
+        aria-label="Word cloud visualization"
       >
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 h-full w-full"
-          aria-label="Word cloud visualization"
-        />
-        {words.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted">
+        {sizedWords.length === 0 ? (
+          <div className="flex h-full min-h-[200px] items-center justify-center px-6 text-center text-sm text-muted">
             No words in this window yet. Keep speaking — the cloud builds from
             live speech.
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-center">
+            {sizedWords.map((w) => (
+              <span
+                key={w.word}
+                className={cn(
+                  "inline-block font-semibold leading-tight transition-transform duration-300",
+                  pulseWord === w.word && "scale-110"
+                )}
+                style={{
+                  fontSize: `${w.fontSizePx}px`,
+                  color: categoryColor(w.category),
+                }}
+                title={`${w.word} · said ${w.count} time${w.count === 1 ? "" : "s"}`}
+              >
+                {w.word}
+              </span>
+            ))}
           </div>
         )}
       </div>
