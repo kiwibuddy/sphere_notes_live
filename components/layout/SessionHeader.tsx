@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { ReactionsInline } from "@/components/layout/ReactionsInline";
 import { formatSessionHeader } from "@/lib/session/day-label";
 import { useSession } from "@/lib/session/context";
 
@@ -20,8 +19,7 @@ export function SessionHeader() {
             {formatSessionHeader(session)} · {meta.presenter}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <ReactionsInline />
+        <div className="flex shrink-0 items-center">
           <StatusChip status={meta.status} />
         </div>
       </div>

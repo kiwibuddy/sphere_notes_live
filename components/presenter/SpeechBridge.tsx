@@ -17,7 +17,6 @@ import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
 import type { SubtitleLine } from "@/types/session";
 import { SpeechRecognizer } from "@/lib/speech";
 import { sanitizeSpeechText } from "@/lib/speech/sanitize";
-import { startNoteExtraction } from "@/lib/notes/extract-notes";
 import { SubtitlePusher } from "@/lib/speech/push-subtitles";
 import type { WordcloudWordsRecord } from "@/lib/wordcloud/ingest";
 import { WordcloudPusher } from "@/lib/wordcloud/wordcloud-pusher";
@@ -225,18 +224,6 @@ export function SpeechBridge() {
       wordcloudPusherRef.current?.dispose();
     };
   }, [joinEventId, loadSubtitlesFromDb]);
-
-  useEffect(() => {
-    if (!sessionReady || !authOk || meta.status !== "live") return;
-
-    return startNoteExtraction({
-      eventId: joinEventId,
-      day: LIVE_SYNC_DAY,
-      getStatus: () => statusRef.current,
-      getTranscript: () => writerRef.current.fullTranscript,
-      onError: (msg) => setPushError(msg),
-    });
-  }, [sessionReady, authOk, meta.status, joinEventId]);
 
   const clearPauseBubbleTimer = useCallback(() => {
     if (pauseBubbleTimerRef.current) {
