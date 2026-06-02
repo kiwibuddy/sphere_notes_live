@@ -62,7 +62,7 @@ Typical highlight: pick Word cloud or a Question → tap OBS **SphereNotes**.
 | Live sync | **Supabase Realtime** (not Firebase) |
 | AI | Claude API via `/api/claude/*` |
 | Speech | **Web Speech API** default — Chrome on Mac (`/presenter/speech` — planned). **Optional upgrade:** Deepgram streaming ASR (see §10 Step 13). **Not using:** Otter / Granola (personal meeting tools — no live broadcast to student phones). |
-| Slides | Keynote → PNG in **`public/slides/`** (flat full deck) + **`slide-bridge.js`** on Mac (stub on `main`; full bridge uncommitted locally) |
+| Slides | Keynote → PNG in **`public/slides/`** (flat full deck) + **`npm run slide-bridge`** on Mac during slideshow |
 | OBS remote | WebSocket v5 from iPad browser → Mac OBS (LAN only) |
 | Auth | **Supabase Anonymous Auth** on student join (for vote dedup) — planned |
 | Bible text | **Bundled JSON** (KJV + BSB) |
@@ -163,7 +163,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Web Speech → Supabase pipeline | ❌ | `lib/speech.ts` wrapper only |
 | `GET /api/slides` | ✅ | Scans **`public/slides/*.png`** only (flat deck); sorts by trailing `.NNN.png` number |
 | Slide sync row (`day_slides`) | 🟡 | Uses **`SLIDE_SYNC_DAY = 1`** for deck position (Keynote slide #), not per teaching-day folders |
-| slide-bridge.js | ❌ | **Stub on `main`** — full Keynote→Supabase poll exists locally but not pushed |
+| slide-bridge.js | ✅ | `npm run slide-bridge` — Keynote AppleScript → `day_slides` (`day = SLIDE_SYNC_DAY`) |
 | Slide PNGs in repo / deploy | ✅ | **178 PNGs** in `public/slides/` (`Reoganland June 2025.*.png`); **Vercel serves 178** via `/api/slides` after deploy `6c8e210` |
 | End Day → archive to Supabase | ❌ | Mock week tab only; includes `subtitles` + `fullTranscript` when live |
 | End Day transcript export | ❌ | Download `.txt` / `.md` from presenter after archive (§10 Step 11.5) |
@@ -231,8 +231,8 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 - [x] Commit PNGs + push (`d3ab3f2`, `6c8e210`)
 - [x] Deploy to Vercel — `/api/slides` returns **178** on production
 - [x] Presenter ⚙ Refresh + manual prev/next writes `day_slides` (`SLIDE_SYNC_DAY`)
-- [ ] **Push** full `slide-bridge.js` (Keynote → auto slide number on phones)
-- [ ] Verify phone Slides tab follows Keynote without manual ⚙ step
+- [x] **`slide-bridge.js`** on `main` — run on Mac during slideshow
+- [ ] Verify phone Slides tab follows Keynote without manual ⚙ step (you test in room)
 
 **Exit criteria:** Advance Keynote on Mac; slide updates on phone within ~3s.
 
@@ -439,7 +439,7 @@ Read these before building backend or running a real class.
 | **Presenter UI** — settings copy points to `public/slides/`; placeholder SVG updated |
 | **Vercel production** — https://sphere-notes-live.vercel.app — `/api/slides` returns 178 after deploy |
 | **Docs** — production URL table; Phase 0/1/2 progress updated |
-| **Not pushed yet** — full `slide-bridge.js` + `npm run slide-bridge` script (local only) |
+| **`slide-bridge.js`** pushed — `npm run slide-bridge` on Mac during Keynote Play |
 
 ---
 
@@ -505,11 +505,11 @@ Legend: **You** = your Mac / accounts · **Build** = code to write · **Test** =
 
 | # | Action | Detail |
 |---|--------|--------|
-| 5.1 | Implement `scripts/slide-bridge.js` | Full version **written locally** — **push to `main`** when ready |
-| 5.2 | AppleScript poll Keynote every **2s** | In local bridge script |
-| 5.3 | Write to Supabase `day_slides` | `day = SLIDE_SYNC_DAY` (1), `current` + `updated_at` via service role |
+| 5.1 | Implement `scripts/slide-bridge.js` | ✅ On `main` |
+| 5.2 | AppleScript poll Keynote every **2s** | ✅ `SLIDE_BRIDGE_POLL_MS` optional |
+| 5.3 | Write to Supabase `day_slides` | ✅ `day = SLIDE_SYNC_DAY` (1), `current` via service role PATCH |
 | 5.4 | Grant Mac **Automation** permission | System Settings → Privacy → Automation: allow Terminal/Node to control Keynote |
-| 5.5 | Run before each session | `npm run slide-bridge` (after push) — env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EVENT_ID` |
+| 5.5 | Run before each session | `npm run slide-bridge` — reads `.env.local` |
 | 5.6 | Student app subscribes to slide state | Already reads `slides.current` — wire to Supabase |
 | **Test** | Advance Keynote → phone slide image changes without manual ⚙ prev/next |
 

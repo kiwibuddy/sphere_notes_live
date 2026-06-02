@@ -13,6 +13,16 @@
 3. Phone should show **LIVE** within ~1s
 4. ⚙ Settings → change week or day topic → phone header updates
 
+## Slide bridge (Mac, before teaching)
+
+While Keynote slideshow is playing, run from repo root:
+
+```bash
+npm run slide-bridge
+```
+
+Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Grant **Automation** for Terminal → Keynote once. Student phones on **Slides** follow `day_slides` row `day = 1` (full-deck position).
+
 ## Realtime
 
 If subscriptions are silent, confirm tables are in **Database → Replication** (migration adds them to `supabase_realtime`).

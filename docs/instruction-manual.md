@@ -321,7 +321,7 @@ Set `NEXT_PUBLIC_APP_URL=https://sphere-notes-live.vercel.app` so QR/join links 
 | **Slide PNGs** | ✅ 178 files in `public/slides/`; flat-folder API deployed (`6c8e210`) |
 | **Vercel** | ✅ https://sphere-notes-live.vercel.app — `/api/slides` returns 178 |
 | **Supabase session** | ✅ On `main` — env vars required; run migrations on your project |
-| **slide-bridge** | ❌ Stub on `main` — full script local only; push when ready (§10 Step 5) |
+| **slide-bridge** | ✅ On `main` — run `npm run slide-bridge` on Mac while Keynote is playing |
 | **Date picker** | 🟡 Check if `TopicEditor` + `lib/dates/sessionDate.ts` still uncommitted |
 | **Next** | Phone test on Vercel Slides tab; OBS rehearsal; push slide-bridge |
 | **No `/presenter/speech`** | Subtitles, translation, word cloud from voice all blocked (§10 Steps 6–9) |
