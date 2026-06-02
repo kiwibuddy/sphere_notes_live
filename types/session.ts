@@ -63,6 +63,8 @@ export interface DayInfo {
 export interface SubtitleLine {
   id: string;
   textEn: string;
+  /** Frozen Web Speech text at finalize — used for translations (not Claude-corrected). */
+  rawTextEn?: string;
   translations: Record<string, string>;
   isCurrent?: boolean;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { Clipping } from "@/types/session";
+import type { Clipping, SupportedLocale } from "@/types/session";
+import { LOCALE_LABELS } from "@/types/session";
 
 const MINE_PREFIX = "spherenotes-mine-day-";
 
@@ -83,15 +84,23 @@ export function useMineNotes(day: number) {
   };
 }
 
+const LOCALE_CODES = new Set<string>(Object.keys(LOCALE_LABELS));
+
+function parseStoredLocale(stored: string | null): SupportedLocale {
+  if (stored && LOCALE_CODES.has(stored)) {
+    return stored as SupportedLocale;
+  }
+  return "en";
+}
+
 export function useLocale() {
-  const [locale, setLocaleState] = useState("en");
+  const [locale, setLocaleState] = useState<SupportedLocale>("en");
 
   useEffect(() => {
-    const stored = localStorage.getItem("spherenotes-locale");
-    if (stored) setLocaleState(stored);
+    setLocaleState(parseStoredLocale(localStorage.getItem("spherenotes-locale")));
   }, []);
 
-  const setLocale = useCallback((code: string) => {
+  const setLocale = useCallback((code: SupportedLocale) => {
     setLocaleState(code);
     localStorage.setItem("spherenotes-locale", code);
   }, []);

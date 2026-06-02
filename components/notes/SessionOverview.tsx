@@ -1,5 +1,6 @@
 "use client";
 
+import { SendToMineButton } from "@/components/cards/SendToMineButton";
 import type { SessionSegment } from "@/types/session";
 import { cn } from "@/lib/utils";
 
@@ -38,17 +39,15 @@ export function SessionOverview({
         </div>
       ))}
       {onSendToMine && segments.length > 0 && (
-        <button
-          type="button"
-          onClick={() =>
-            onSendToMine(
-              segments.map((s) => `${s.startTime} — ${s.title}`).join("\n")
-            )
-          }
-          className="text-xs font-medium text-tab-overview"
-        >
-          + My Notes
-        </button>
+        <div className="flex justify-end pt-2">
+          <SendToMineButton
+            onSend={() =>
+              onSendToMine(
+                segments.map((s) => `${s.startTime} — ${s.title}`).join("\n")
+              )
+            }
+          />
+        </div>
       )}
     </div>
   );

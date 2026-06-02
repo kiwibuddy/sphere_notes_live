@@ -3,6 +3,7 @@
 import { SlideFullscreenView } from "@/components/slides/SlideFullscreenView";
 import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { useLocale } from "@/hooks/useMineNotes";
+import { useSubtitleTranslations } from "@/hooks/useSubtitleTranslations";
 import { isLandscape, isMobilePhone } from "@/lib/device/ios";
 import { useSession } from "@/lib/session/context";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,7 @@ interface SlideViewerProps {
 export function SlideViewer({ readOnly }: SlideViewerProps) {
   const { slides, subtitles, isTabLiveActive } = useSession();
   const { locale, setLocale } = useLocale();
+  const displaySubtitles = useSubtitleTranslations(subtitles, locale);
   const [fullscreen, setFullscreen] = useState(false);
   const [subtitlesOn, setSubtitlesOn] = useState(true);
   const autoLandscapeRef = useRef(false);
@@ -28,9 +30,9 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
 
   const currentLine = useMemo(
     () =>
-      subtitles.find((line) => line.isCurrent) ??
-      subtitles[subtitles.length - 1],
-    [subtitles]
+      displaySubtitles.find((line) => line.isCurrent) ??
+      displaySubtitles[displaySubtitles.length - 1],
+    [displaySubtitles]
   );
 
   const subtitleText = currentLine
@@ -147,7 +149,7 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
         createPortal(
           <SlideFullscreenView
             slideSrc={current}
-            subtitles={subtitles}
+            subtitles={displaySubtitles}
             onClose={closeFullscreen}
           />,
           document.body

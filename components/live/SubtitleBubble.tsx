@@ -109,12 +109,7 @@ export function SubtitleBubble({
           {isLive && <TypingIndicator />}
 
           {!readOnly && onSendToMine && (
-            <div
-              className={cn(
-                "mt-3 border-t pt-2",
-                isLive ? "border-border/60" : "border-border/50"
-              )}
-            >
+            <div className="mt-1 flex justify-end">
               <SendToMineButton onSend={() => onSendToMine(text)} />
             </div>
           )}

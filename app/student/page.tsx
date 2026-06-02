@@ -5,12 +5,14 @@ import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { SubtitleFeed } from "@/components/live/SubtitleFeed";
 import { useSendToMine } from "@/hooks/useSendToMine";
 import { useLocale } from "@/hooks/useMineNotes";
+import { useSubtitleTranslations } from "@/hooks/useSubtitleTranslations";
 import { useSession } from "@/lib/session/context";
 import { useState } from "react";
 
 export default function LivePage() {
   const { subtitles, meta, isTabLiveActive } = useSession();
   const { locale, setLocale } = useLocale();
+  const displayLines = useSubtitleTranslations(subtitles, locale);
   const [fontSize, setFontSize] = useState(17);
   const sendToMine = useSendToMine();
   const isLive = isTabLiveActive("live");
@@ -25,6 +27,11 @@ export default function LivePage() {
               <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-tab-live md:text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse-live rounded-full bg-live-active" />
                 Live
+                {locale === "en" && (
+                  <span className="font-normal normal-case text-muted">
+                    · Corrected
+                  </span>
+                )}
               </span>
             )}
             {meta.status === "paused" && (
@@ -61,7 +68,7 @@ export default function LivePage() {
         {showContent && (
           <SubtitleFeed
             className="min-h-0 flex-1"
-            lines={subtitles}
+            lines={displayLines}
             locale={locale}
             fontSize={fontSize}
             onSendToMine={(text) => sendToMine(text, "live", "Live subtitles")}

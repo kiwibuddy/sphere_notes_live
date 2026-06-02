@@ -45,7 +45,7 @@ export function applySpeechResult(
       lines[idx] = {
         ...lines[idx],
         textEn: trimmed,
-        isCurrent: !isFinal,
+        ...(isFinal ? { rawTextEn: trimmed, isCurrent: false } : { isCurrent: true }),
       };
     }
   }

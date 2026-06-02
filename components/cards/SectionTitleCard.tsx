@@ -11,7 +11,7 @@ interface CardActionsProps {
 export function CardActions({ onSendToMine, sendText }: CardActionsProps) {
   if (!onSendToMine || !sendText) return null;
   return (
-    <div className="mt-4 flex justify-end border-t border-border pt-3">
+    <div className="mt-3 flex justify-end">
       <SendToMineButton onSend={() => onSendToMine(sendText)} />
     </div>
   );

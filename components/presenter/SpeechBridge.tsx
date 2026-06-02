@@ -15,6 +15,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
 import { SpeechRecognizer } from "@/lib/speech";
 import { sanitizeSpeechText } from "@/lib/speech/sanitize";
+import { enqueueSubtitleCorrection } from "@/lib/speech/enqueue-correction";
 import { SubtitlePusher } from "@/lib/speech/push-subtitles";
 import {
   applySpeechResult,
@@ -136,6 +137,8 @@ export function SpeechBridge() {
 
   const handleSpeechResult = useCallback((transcript: string, isFinal: boolean) => {
     const safe = sanitizeSpeechText(transcript);
+    const finalizedLineId = isFinal ? writerRef.current.currentLineId : null;
+
     writerRef.current = applySpeechResult(
       writerRef.current,
       safe,
@@ -144,9 +147,26 @@ export function SpeechBridge() {
     setLastPreview(safe.trim());
     setLineCount(writerRef.current.lines.length);
     pusherRef.current?.push(writerRef.current, isFinal);
+
     if (isFinal) {
       void pusherRef.current?.flush().then((ok) => {
         if (ok) setLastPushAt(Date.now());
+
+        const line =
+          writerRef.current.lines.find((l) => l.id === finalizedLineId) ??
+          writerRef.current.lines.filter((l) => !l.isCurrent).at(-1);
+
+        if (line?.rawTextEn) {
+          enqueueSubtitleCorrection(
+            () => writerRef.current,
+            (state) => {
+              writerRef.current = state;
+            },
+            pusherRef.current,
+            line.id,
+            line.rawTextEn
+          );
+        }
       });
     }
   }, []);

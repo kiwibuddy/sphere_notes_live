@@ -1,5 +1,6 @@
 "use client";
 
+import { SendToMineButton } from "@/components/cards/SendToMineButton";
 import type { WordCloudWord } from "@/types/session";
 import type { WordCloudMode } from "@/types/session";
 import { captureWordCloudSnapshot } from "@/lib/wordcloud/capture";
@@ -122,14 +123,8 @@ export function WordCloudCanvas({
         )}
       </div>
       {onSendToMine && words.length > 0 && (
-        <div className="shrink-0 border-t border-border p-3 text-right">
-          <button
-            type="button"
-            onClick={handleSend}
-            className="text-xs font-medium text-tab-cloud md:text-sm"
-          >
-            + My Notes
-          </button>
+        <div className="shrink-0 p-2 text-right">
+          <SendToMineButton onSend={handleSend} />
         </div>
       )}
     </div>

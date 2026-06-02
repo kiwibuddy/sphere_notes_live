@@ -8,8 +8,8 @@ import { useState } from "react";
 const LOCALES = Object.keys(LOCALE_LABELS) as SupportedLocale[];
 
 interface LanguagePickerProps {
-  locale: string;
-  onChange: (locale: string) => void;
+  locale: SupportedLocale;
+  onChange: (locale: SupportedLocale) => void;
   variant?: "default" | "dark";
 }
 
