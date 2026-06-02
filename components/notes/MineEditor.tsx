@@ -6,16 +6,19 @@ import { ClippingBlock } from "@/components/notes/ClippingBlock";
 import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useRef } from "react";
 
-export function MineEditor() {
+interface MineEditorProps {
+  day?: number;
+  scope?: "live" | "archive";
+}
+
+export function MineEditor({ day = LIVE_SYNC_DAY, scope = "live" }: MineEditorProps) {
   const {
     content,
     clippings,
     lastSaved,
     updateContent,
     removeClipping,
-    clearNotes,
-  } =
-    useMineNotes(LIVE_SYNC_DAY);
+  } = useMineNotes(day, { scope });
   const editorRef = useRef<HTMLDivElement>(null);
   const skipSync = useRef(false);
 
@@ -48,11 +51,8 @@ export function MineEditor() {
 
   const handleExportPdf = useCallback(() => {
     persistEditor();
-    // Clear after the print dialog finishes (e.g. "Save as PDF").
-    const expire = () => clearNotes();
-    window.addEventListener("afterprint", expire, { once: true });
     window.print();
-  }, [clearNotes, persistEditor]);
+  }, [persistEditor]);
 
   return (
     <div className="flex h-full flex-col bg-[#F5F0E8]">
@@ -65,7 +65,11 @@ export function MineEditor() {
           suppressContentEditableWarning
           onInput={persistEditor}
           onBlur={persistEditor}
-          data-placeholder="Your notes for this session…"
+          data-placeholder={
+            scope === "archive"
+              ? "Your archived notes for this week session…"
+              : "Your notes for this session…"
+          }
           className={cn(
             "mine-editor min-h-[160px] rounded-xl bg-surface/60 px-4 pb-4 pt-12",
             "text-sm leading-relaxed text-foreground shadow-sm",

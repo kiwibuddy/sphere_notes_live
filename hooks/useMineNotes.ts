@@ -1,24 +1,41 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "@/lib/session/context";
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "@/lib/session/session-context";
+import {
+  archiveMineStorageKey,
+  clearMineDraft,
+  liveMineStorageKey,
+  readMineDraft,
+  saveMineDraft,
+} from "@/lib/notes/mine-storage";
 import type { Clipping, SupportedLocale } from "@/types/session";
 import { LOCALE_LABELS } from "@/types/session";
 
-const MINE_PREFIX = "spherenotes-mine-day-";
+type MineScope = "live" | "archive";
 
-export function useMineNotes(day: number) {
-  const { meta } = useSession();
+interface UseMineNotesOptions {
+  scope?: MineScope;
+  eventId?: string;
+}
+
+export function useMineNotes(day: number, options: UseMineNotesOptions = {}) {
+  const { joinEventId } = useSession();
 
   const [content, setContent] = useState("");
   const [clippings, setClippings] = useState<Clipping[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
-  const storageKey = `${MINE_PREFIX}${day}`;
+  const eventId = options.eventId ?? joinEventId;
+  const scope = options.scope ?? "live";
+  const storageKey =
+    scope === "archive"
+      ? archiveMineStorageKey(eventId, day)
+      : liveMineStorageKey(eventId);
 
   const clearNotes = useCallback(() => {
     try {
-      localStorage.removeItem(storageKey);
+      clearMineDraft(storageKey);
     } catch {
       /* ignore */
     }
@@ -29,47 +46,18 @@ export function useMineNotes(day: number) {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw) as {
-          content: string;
-          clippings: Clipping[];
-        };
-        setContent(parsed.content ?? "");
-        setClippings(parsed.clippings ?? []);
-      } else {
-        setContent("");
-        setClippings([]);
-      }
+      const draft = readMineDraft(storageKey);
+      setContent(draft.content);
+      setClippings(draft.clippings);
     } catch {
       setContent("");
       setClippings([]);
     }
   }, [storageKey]);
 
-  // Expire student notes between sessions so exported PDFs don't include stale content.
-  const prevStatusRef = useRef(meta.status);
-  useEffect(() => {
-    const prev = prevStatusRef.current;
-    const next = meta.status;
-    if (prev === next) return;
-
-    const isGoLive = prev === "waiting" && next === "live";
-    const isEndDay = (prev === "live" || prev === "paused") && next === "waiting";
-
-    if (isGoLive || isEndDay) {
-      clearNotes();
-    }
-
-    prevStatusRef.current = next;
-  }, [meta.status, clearNotes]);
-
   const save = useCallback(
     (newContent: string, newClippings: Clipping[]) => {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ content: newContent, clippings: newClippings })
-      );
+      saveMineDraft(storageKey, { content: newContent, clippings: newClippings });
       setLastSaved(new Date());
     },
     [storageKey]

@@ -122,7 +122,7 @@ export default function WeekPage() {
             {archiveLoading && " · Loading…"}
           </p>
         </div>
-        <WeekArchivePanel archive={archive} />
+        <WeekArchivePanel archive={archive} source={archiveSource} />
       </div>
     </div>
   );

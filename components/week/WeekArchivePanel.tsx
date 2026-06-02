@@ -4,6 +4,7 @@ import type { DayArchive } from "@/types/session";
 import { SubtitleFeed } from "@/components/live/SubtitleFeed";
 import { QuestionList } from "@/components/qa/QuestionList";
 import { NoteCardRenderer } from "@/components/cards/NoteCardRenderer";
+import { MineEditor } from "@/components/notes/MineEditor";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -11,9 +12,10 @@ const ARCHIVE_TABS = ["Live", "Q&A", "Slides", "Notes"] as const;
 
 interface WeekArchivePanelProps {
   archive: DayArchive;
+  source: "live" | "stored";
 }
 
-export function WeekArchivePanel({ archive }: WeekArchivePanelProps) {
+export function WeekArchivePanel({ archive, source }: WeekArchivePanelProps) {
   const [tab, setTab] = useState<(typeof ARCHIVE_TABS)[number]>("Live");
 
   // When the user switches to a different archived day, reset panel tab state.
@@ -70,7 +72,10 @@ export function WeekArchivePanel({ archive }: WeekArchivePanelProps) {
             </p>
           </div>
         )}
-        {tab === "Notes" && (
+        {tab === "Notes" && source === "stored" && (
+          <MineEditor day={archive.day} scope="archive" />
+        )}
+        {tab === "Notes" && source === "live" && (
           <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
             {archive.notes.map((card, i) => (
               <NoteCardRenderer

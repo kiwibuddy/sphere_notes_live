@@ -50,6 +50,11 @@ import {
 } from "@/lib/session/clear-live-bucket";
 import { pushLiveMessageToSubtitles } from "@/lib/speech/push-live-message";
 import { resetWordcloudForDay } from "@/lib/wordcloud/simulation";
+import {
+  clearMineDraft,
+  liveMineStorageKey,
+  moveLiveMineToArchive,
+} from "@/lib/notes/mine-storage";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type { Json } from "@/lib/supabase/database.types";
 import type {
@@ -767,6 +772,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
   const goLive = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     await clearLiveBucketInDb(supabase, eventId, LIVE_SYNC_DAY);
+    clearMineDraft(liveMineStorageKey(eventId));
     setSubtitles([]);
     setWordcloudEntries(resetWordcloudForDay(LIVE_SYNC_DAY));
     setNotes([]);
@@ -821,6 +827,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       } as unknown as Json,
     });
 
+    moveLiveMineToArchive(eventId, archiveSlot);
     await clearLiveBucketInDb(supabase, eventId, LIVE_SYNC_DAY);
     await resetLiveSessionChrome(supabase, eventId, LIVE_SYNC_DAY);
 

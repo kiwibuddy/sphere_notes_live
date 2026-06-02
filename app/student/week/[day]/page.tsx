@@ -43,7 +43,7 @@ export default function DayArchivePage() {
           </p>
         </div>
       </div>
-      <WeekArchivePanel archive={archive} />
+      <WeekArchivePanel archive={archive} source={isLiveRoute ? "live" : "stored"} />
     </div>
   );
 }
