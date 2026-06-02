@@ -31,6 +31,7 @@ import {
   Cloud,
   Monitor,
   MessageCircleQuestion,
+  RotateCcw,
   Settings,
 } from "lucide-react";
 
@@ -56,6 +57,7 @@ export function PresenterDashboard() {
     displayMode,
     displayQuestion,
     setDisplay,
+    resetQuestions,
     studentJoinUrl,
   } = useSession();
 
@@ -251,14 +253,41 @@ export function PresenterDashboard() {
 
           {/* Questions — choose which one to show */}
           <section className="rounded-xl bg-surface p-4 shadow-card md:p-6">
-            <h2 className="mb-1 text-sm font-semibold text-foreground">
-              Questions
-            </h2>
-            <p className="mb-4 text-xs text-muted">
-              Tap <strong>Show</strong> on any question to put it on the
-              projector. Use &ldquo;Top question&rdquo; above for the most
-              upvoted one.
-            </p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Questions
+                </h2>
+                <p className="mt-1 text-xs text-muted">
+                  Tap <strong>Show</strong> on any question to put it on the
+                  projector. Use &ldquo;Top question&rdquo; above for the most
+                  upvoted one.
+                </p>
+              </div>
+              {(meta.status === "live" || meta.status === "paused") && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={sortedQuestions.length === 0}
+                  className="shrink-0 gap-1.5"
+                  onClick={() => {
+                    if (
+                      sortedQuestions.length > 0 &&
+                      !window.confirm(
+                        "Clear all student questions? This cannot be undone."
+                      )
+                    ) {
+                      return;
+                    }
+                    void resetQuestions();
+                  }}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                  Reset questions
+                </Button>
+              )}
+            </div>
 
             <div className="space-y-2">
               {sortedQuestions.length === 0 ? (

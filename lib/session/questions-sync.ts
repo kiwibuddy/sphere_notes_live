@@ -17,6 +17,7 @@ export async function fetchQuestionsForDay(
     .select("*")
     .eq("event_id", eventId)
     .eq("day", day)
+    .neq("status", "archived")
     .order("votes", { ascending: false });
 
   if (!questionRows?.length) return [];
@@ -54,4 +55,19 @@ export function sortQuestions(questions: Question[]): Question[] {
   return [...questions]
     .filter((q) => q.status !== "archived")
     .sort((a, b) => b.votes - a.votes);
+}
+
+/** Presenter reset — removes all Q&A rows for this event/day (votes cascade). */
+export async function clearQuestionsForDay(
+  supabase: Client,
+  eventId: string,
+  day: number
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("questions")
+    .delete()
+    .eq("event_id", eventId)
+    .eq("day", day);
+
+  return !error;
 }

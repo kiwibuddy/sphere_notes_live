@@ -29,6 +29,7 @@ import { ensureSupabaseAuth } from "@/lib/session/ensure-auth";
 import { withTimeout, TimeoutError } from "@/lib/session/with-timeout";
 import { SessionConnectionScreen } from "@/components/setup/SessionConnectionScreen";
 import {
+  clearQuestionsForDay,
   fetchQuestionsForDay,
   mergeQuestionRow,
   sortQuestions,
@@ -534,13 +535,27 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
             status: string;
             created_at: string;
           };
-          if (row.day !== activeDay) return;
+          if (row.day !== activeDay || row.status === "archived") return;
           setQuestions((prev) =>
             sortQuestions([
               mergeQuestionRow(row, votedIdsRef.current),
               ...prev.filter((q) => q.id !== row.id),
             ])
           );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "questions",
+          filter: `event_id=eq.${eventId}`,
+        },
+        (payload) => {
+          const row = payload.old as { id: string; day?: number };
+          if (row.day != null && row.day !== activeDay) return;
+          setQuestions((prev) => prev.filter((q) => q.id !== row.id));
         }
       )
       .on(
@@ -561,6 +576,10 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
             created_at: string;
           };
           if (row.day !== activeDay) return;
+          if (row.status === "archived") {
+            setQuestions((prev) => prev.filter((q) => q.id !== row.id));
+            return;
+          }
           setQuestions((prev) =>
             sortQuestions(
               prev.map((q) =>
@@ -760,6 +779,12 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       })
       .eq("event_id", eventId)
       .eq("day", LIVE_SYNC_DAY);
+    await supabase
+      .from("note_cards")
+      .delete()
+      .eq("event_id", eventId)
+      .eq("day", LIVE_SYNC_DAY);
+    setNotes([]);
     await setStatus("live");
   }, [setStatus, eventId]);
 
@@ -950,6 +975,21 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     [displayQuote, displayQuestion, eventId]
   );
 
+  const resetQuestions = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    const ok = await clearQuestionsForDay(supabase, eventId, activeDay);
+    if (!ok) {
+      console.error("[session] clear questions failed");
+      return;
+    }
+
+    setQuestions([]);
+    votedIdsRef.current.clear();
+    if (displayMode === "question") {
+      void setDisplay("idle");
+    }
+  }, [eventId, activeDay, displayMode, setDisplay]);
+
   const addClipping = useCallback(
     (clipping: Omit<Clipping, "id" | "createdAt">) => {
       setClippings((prev) => [
@@ -992,6 +1032,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     isTabLiveActive,
     voteQuestion,
     submitQuestion,
+    resetQuestions,
     addReaction,
     setDisplay,
     addClipping,

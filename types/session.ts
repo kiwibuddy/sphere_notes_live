@@ -174,6 +174,8 @@ export interface SessionContextValue {
   isTabLiveActive: (tab: "live" | "slides" | "notes" | "qa") => boolean;
   voteQuestion: (id: string) => void;
   submitQuestion: (text: string) => void;
+  /** Presenter: delete all questions for the current session day. */
+  resetQuestions: () => Promise<void>;
   addReaction: (key: keyof Reactions) => void;
   setDisplay: (mode: DisplayMode, payload?: DisplayPayload) => void;
   addClipping: (clipping: Omit<Clipping, "id" | "createdAt">) => void;
