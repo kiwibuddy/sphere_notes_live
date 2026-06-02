@@ -1,23 +1,13 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { WaitingOverlay } from "@/components/layout/SessionHeader";
-import { SlideViewer } from "@/components/slides/SlideViewer";
-import { useSession } from "@/lib/session/context";
-
-export default function SlidesPage() {
-  const { meta, isTabLiveActive } = useSession();
-  const isLive = isTabLiveActive("slides");
-  const showContent = isLive || meta.status === "paused";
-
-  return (
-    <div className="absolute inset-0 overflow-hidden">
-      {!showContent && (
-        <WaitingOverlay
-          show
-          message="Slides will sync when the session goes live."
-        />
-      )}
-      {showContent && <SlideViewer />}
-    </div>
-  );
+/** Legacy path — student home is now `/student` (slides). */
+export default function SlidesLegacyRedirect({
+  searchParams,
+}: {
+  searchParams: { event?: string; day?: string };
+}) {
+  const params = new URLSearchParams();
+  if (searchParams.event) params.set("event", searchParams.event);
+  const q = params.toString();
+  redirect(q ? `/student?${q}` : "/student");
 }
