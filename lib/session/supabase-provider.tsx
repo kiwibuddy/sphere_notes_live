@@ -638,6 +638,31 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     };
   }, [ready, eventId, activeDay, userId]);
 
+  const refetchSubtitles = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    const { data } = await supabase
+      .from("day_subtitles")
+      .select("lines")
+      .eq("event_id", eventId)
+      .eq("day", LIVE_SYNC_DAY)
+      .maybeSingle();
+    if (data?.lines) {
+      setSubtitles(mapSubtitleLines(data.lines));
+    }
+  }, [eventId]);
+
+  /** iOS Safari often pauses Realtime in background — refresh when tab returns. */
+  useEffect(() => {
+    if (!ready) return;
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refetchSubtitles();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [ready, refetchSubtitles]);
+
   const setEventTitle = useCallback(
     async (title: string) => {
       const trimmed = title.trim();

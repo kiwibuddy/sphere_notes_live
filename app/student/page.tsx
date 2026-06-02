@@ -54,7 +54,10 @@ export default function LivePage() {
         </div>
       </div>
 
-      <StudentContent width="narrow" className="relative">
+      <StudentContent
+        width="narrow"
+        className="relative min-h-0 flex-1 touch-pan-y [-webkit-overflow-scrolling:touch]"
+      >
         <WaitingOverlay
           show={!showContent}
           message="Live subtitles will appear when the session starts."

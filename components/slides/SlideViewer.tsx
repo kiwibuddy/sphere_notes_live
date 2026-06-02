@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session/context";
 import { cn } from "@/lib/utils";
 import { Captions, Maximize2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface SlideViewerProps {
   readOnly?: boolean;
@@ -103,13 +104,16 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
         )}
       </div>
 
-      {fullscreen && (
-        <SlideFullscreenView
-          slideSrc={current}
-          subtitles={subtitles}
-          onClose={closeFullscreen}
-        />
-      )}
+      {fullscreen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <SlideFullscreenView
+            slideSrc={current}
+            subtitles={subtitles}
+            onClose={closeFullscreen}
+          />,
+          document.body
+        )}
     </>
   );
 }

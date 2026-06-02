@@ -2,6 +2,10 @@
 
 import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { useLocale } from "@/hooks/useMineNotes";
+import {
+  isIOS,
+  supportsElementFullscreen,
+} from "@/lib/device/ios";
 import { cn } from "@/lib/utils";
 import type { SubtitleLine } from "@/types/session";
 import { Captions, Minimize2 } from "lucide-react";
@@ -58,8 +62,9 @@ export function SlideFullscreenView({
   const containerRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const intentionalExitRef = useRef(false);
+  const nativeFsActiveRef = useRef(false);
   const { locale, setLocale } = useLocale();
-  const [subtitlesOn, setSubtitlesOn] = useState(false);
+  const [subtitlesOn, setSubtitlesOn] = useState(isIOS());
 
   onCloseRef.current = onClose;
 
@@ -77,7 +82,7 @@ export function SlideFullscreenView({
     : null;
 
   const handleClose = useCallback(async () => {
-    if (getFullscreenElement()) {
+    if (nativeFsActiveRef.current && getFullscreenElement()) {
       intentionalExitRef.current = true;
       try {
         await exitDocumentFullscreen();
@@ -90,19 +95,29 @@ export function SlideFullscreenView({
     onCloseRef.current();
   }, []);
 
-  // Enter fullscreen once on mount; only exit on unmount or explicit user close.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    document.body.classList.add("slide-immersive-open");
 
-    void requestElementFullscreen(el).catch(() => {
-      // Fixed overlay fallback when native fullscreen is unavailable.
-    });
+    const useNative = supportsElementFullscreen();
+
+    if (useNative) {
+      void requestElementFullscreen(el)
+        .then(() => {
+          nativeFsActiveRef.current = !!getFullscreenElement();
+        })
+        .catch(() => {
+          nativeFsActiveRef.current = false;
+        });
+    }
 
     const onFullscreenChange = () => {
+      if (!nativeFsActiveRef.current) return;
+
       if (intentionalExitRef.current) {
         intentionalExitRef.current = false;
         if (!getFullscreenElement()) {
@@ -121,22 +136,29 @@ export function SlideFullscreenView({
 
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.body.classList.remove("slide-immersive-open");
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
 
-      if (getFullscreenElement() === el) {
+      if (nativeFsActiveRef.current && getFullscreenElement() === el) {
         intentionalExitRef.current = true;
         void exitDocumentFullscreen().catch(() => {
           intentionalExitRef.current = false;
         });
       }
+      nativeFsActiveRef.current = false;
     };
   }, []);
 
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-[100] flex h-dvh w-dvw flex-col bg-[#F7F5F2]"
+      className={cn(
+        "fixed inset-0 z-[9999] flex flex-col bg-[#F7F5F2]",
+        "h-[100dvh] min-h-[100dvh] w-full max-w-[100vw]",
+        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+        "pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]"
+      )}
       role="dialog"
       aria-modal="true"
       aria-label="Slide fullscreen view"
@@ -144,22 +166,27 @@ export function SlideFullscreenView({
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           className={cn(
-            "flex min-h-0 flex-1 items-stretch justify-center",
-            subtitlesOn && "pb-2"
+            "flex min-h-0 flex-1 items-center justify-center",
+            subtitlesOn && "pb-1"
           )}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={slideSrc}
             alt="Current slide"
-            className="h-full w-full object-contain"
+            className="max-h-full max-w-full object-contain"
+            style={{
+              maxHeight: subtitlesOn
+                ? "calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 7rem)"
+                : "calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 3.5rem)",
+            }}
           />
         </div>
 
         {subtitlesOn && (
-          <div className="shrink-0 px-4 pb-6 pt-4">
+          <div className="shrink-0 px-4 pb-4 pt-2">
             {subtitleText ? (
-              <p className="text-center text-base leading-relaxed text-foreground md:text-lg">
+              <p className="text-center text-base leading-relaxed text-foreground">
                 {subtitleText}
               </p>
             ) : (
@@ -171,7 +198,7 @@ export function SlideFullscreenView({
         )}
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/90 to-transparent px-4 pb-8 pt-3">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/95 to-transparent px-3 pb-6 pt-[max(0.5rem,env(safe-area-inset-top))]">
         <div className="pointer-events-auto flex items-center justify-end gap-2">
           {subtitlesOn && (
             <LanguagePicker locale={locale} onChange={setLocale} />
@@ -182,7 +209,7 @@ export function SlideFullscreenView({
             aria-pressed={subtitlesOn}
             aria-label={subtitlesOn ? "Hide subtitles" : "Show subtitles"}
             className={cn(
-              "rounded-md p-2 transition-colors",
+              "rounded-md p-2.5 transition-colors",
               subtitlesOn
                 ? "bg-tab-slides/15 text-tab-slides"
                 : "text-muted hover:bg-surface hover:text-foreground"
@@ -194,7 +221,7 @@ export function SlideFullscreenView({
             type="button"
             onClick={() => void handleClose()}
             aria-label="Exit fullscreen"
-            className="rounded-md p-2 text-muted transition-colors hover:bg-surface hover:text-foreground"
+            className="rounded-md p-2.5 text-muted transition-colors hover:bg-surface hover:text-foreground"
           >
             <Minimize2 className="h-5 w-5" />
           </button>
