@@ -12,7 +12,7 @@ export interface SizedWord extends WordCloudWord {
   fontSizePx: number;
 }
 
-/** Map count → pixel font size (larger spread when fewer words). */
+/** Map count + rank → pixel font size (fixed per word; layout may scale the set). */
 export function sizeWordCloud(
   words: WordCloudWord[],
   maxWords = 50
@@ -25,20 +25,21 @@ export function sizeWordCloud(
   if (n === 0) return [];
 
   const maxCount = Math.max(...sorted.map((w) => w.count), 1);
-  const minPx = 12;
+  const minPx = 11;
   const maxPx =
-    maxWords > 80 ? 36 : n > 45 ? 38 : n > 25 ? 48 : n > 12 ? 56 : 72;
+    n > 70 ? 36 : n > 45 ? 42 : n > 25 ? 50 : n > 12 ? 58 : 72;
 
   return sorted.map((w, rank) => {
     const countPart =
       maxCount > 1
         ? Math.log(w.count + 1) / Math.log(maxCount + 1)
         : 0;
-    const rankPart = n <= 1 ? 1 : 1 - rank / Math.max(n - 1, 1);
+    const rankNorm = n <= 1 ? 1 : 1 - rank / Math.max(n - 1, 1);
+    const rankPart = Math.pow(rankNorm, 0.55);
     const blend =
-      maxCount > 1 ? 0.9 * countPart + 0.1 * rankPart : rankPart;
+      maxCount > 1 ? 0.85 * countPart + 0.15 * rankPart : rankPart;
     const fontSizePx = Math.round(
-      minPx + Math.pow(Math.max(0, Math.min(1, blend)), 0.55) * (maxPx - minPx)
+      minPx + Math.pow(Math.max(0, Math.min(1, blend)), 0.4) * (maxPx - minPx)
     );
 
     return { ...w, fontSizePx };
