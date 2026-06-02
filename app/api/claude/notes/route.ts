@@ -5,7 +5,7 @@ import { readFile } from "fs/promises";
 import { NextResponse } from "next/server";
 import path from "path";
 
-const DEFAULT_NOTES_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_NOTES_MODEL = "claude-haiku-4-5";
 
 let scriptureCache: Record<string, Record<string, string>> | null = null;
 
@@ -29,8 +29,8 @@ async function loadScriptureLookup(): Promise<
 }
 
 /**
- * LIVE: Claude Sonnet structured notes extraction.
- * POST { transcript: string, newSinceChars?: number, existingSummaries?: string[] }
+ * LIVE: Claude Haiku structured notes extraction.
+ * POST { newTranscript: string, existingSummaries?: string[] }
  */
 export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -42,27 +42,22 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { transcript, newSinceChars, existingSummaries } = body as {
-    transcript?: string;
-    newSinceChars?: number;
+  const { newTranscript, existingSummaries } = body as {
+    newTranscript?: string;
     existingSummaries?: string[];
   };
 
-  const trimmed = transcript?.trim() ?? "";
+  const trimmed = newTranscript?.trim() ?? "";
   if (trimmed.length < 40) {
     return NextResponse.json(
-      { error: "transcript is required (min ~40 chars)" },
+      { error: "newTranscript is required (min ~40 chars)" },
       { status: 400 }
     );
   }
 
   const scriptureJson = await loadScriptureLookup();
   const prompt = buildNotesPrompt({
-    transcript: trimmed,
-    newSinceChars:
-      typeof newSinceChars === "number" && newSinceChars > 0
-        ? newSinceChars
-        : 0,
+    newTranscript: trimmed,
     existingSummaries: existingSummaries ?? [],
     scriptureJson,
   });

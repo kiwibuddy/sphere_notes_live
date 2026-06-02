@@ -14,16 +14,17 @@ import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { useSession } from "@/lib/session/context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
+import type { SubtitleLine } from "@/types/session";
 import { SpeechRecognizer } from "@/lib/speech";
 import { sanitizeSpeechText } from "@/lib/speech/sanitize";
 import { startNoteExtraction } from "@/lib/notes/extract-notes";
-import { enqueueSubtitleCorrection } from "@/lib/speech/enqueue-correction";
 import { SubtitlePusher } from "@/lib/speech/push-subtitles";
 import type { WordcloudWordsRecord } from "@/lib/wordcloud/ingest";
 import { WordcloudPusher } from "@/lib/wordcloud/wordcloud-pusher";
 import {
   applySpeechResult,
   createSubtitleWriterState,
+  MAX_SUBTITLE_BUBBLE_CHARS,
   type SubtitleWriterState,
 } from "@/lib/speech/subtitle-writer";
 import type { SessionStatus } from "@/types/session";
@@ -34,6 +35,19 @@ function isWebSpeechSupported(): boolean {
   if (typeof window === "undefined") return false;
   return !!(window.SpeechRecognition ?? window.webkitSpeechRecognition);
 }
+
+function hasNewManualLine(
+  incoming: SubtitleLine[],
+  local: SubtitleLine[]
+): boolean {
+  const localManualIds = new Set(
+    local.filter((l) => l.isManual).map((l) => l.id)
+  );
+  return incoming.some((l) => l.isManual && !localManualIds.has(l.id));
+}
+
+/** End a bubble after a short pause when Chrome has not marked the phrase final. */
+const PAUSE_BUBBLE_MS = 1200;
 
 function statusLabel(status: SessionStatus): string {
   switch (status) {
@@ -69,10 +83,13 @@ export function SpeechBridge() {
   const wordcloudPusherRef = useRef<WordcloudPusher | null>(null);
   const statusRef = useRef(meta.status);
   const micEnabledRef = useRef(micEnabled);
+  const listeningRef = useRef(listening);
+  const pauseBubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const supported = isWebSpeechSupported();
 
   statusRef.current = meta.status;
   micEnabledRef.current = micEnabled;
+  listeningRef.current = listening;
 
   const loadSubtitlesFromDb = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
@@ -110,8 +127,10 @@ export function SpeechBridge() {
       data?.full_transcript ?? ""
     );
     setLineCount(lines.length);
-    const current = lines.find((l) => l.isCurrent);
-    setLastPreview(current?.textEn ?? lines.at(-1)?.textEn ?? "");
+    if (!listeningRef.current) {
+      const current = lines.find((l) => l.isCurrent);
+      setLastPreview(current?.textEn ?? lines.at(-1)?.textEn ?? "");
+    }
 
     if (WORD_CLOUD_UI_ENABLED) {
       wordcloudPusherRef.current?.load(
@@ -151,8 +170,23 @@ export function SpeechBridge() {
           filter: `event_id=eq.${joinEventId}`,
         },
         (payload) => {
-          const row = payload.new as { day: number };
+          const row = payload.new as { day: number; lines: unknown };
           if (row.day !== LIVE_SYNC_DAY) return;
+
+          const incoming = mapSubtitleLines(row.lines);
+          const local = writerRef.current.lines;
+          const clearedExternally =
+            incoming.length === 0 && local.length > 0;
+          const manualFromIpad = hasNewManualLine(incoming, local);
+
+          if (
+            !clearedExternally &&
+            !manualFromIpad &&
+            pusherRef.current?.shouldIgnoreExternalSync()
+          ) {
+            return;
+          }
+
           void loadSubtitlesFromDb();
         }
       )
@@ -204,55 +238,101 @@ export function SpeechBridge() {
     });
   }, [sessionReady, authOk, meta.status, joinEventId]);
 
+  const clearPauseBubbleTimer = useCallback(() => {
+    if (pauseBubbleTimerRef.current) {
+      clearTimeout(pauseBubbleTimerRef.current);
+      pauseBubbleTimerRef.current = null;
+    }
+  }, []);
+
   const stopRecognizer = useCallback(() => {
+    clearPauseBubbleTimer();
     recognizerRef.current?.stop();
     recognizerRef.current = null;
     setListening(false);
-  }, []);
+  }, [clearPauseBubbleTimer]);
 
-  const handleSpeechResult = useCallback((transcript: string, isFinal: boolean) => {
+  const commitFinalSegment = useCallback((transcript: string) => {
     const safe = sanitizeSpeechText(transcript);
-    const finalizedLineId = isFinal ? writerRef.current.currentLineId : null;
+    if (!safe.trim()) return;
 
-    writerRef.current = applySpeechResult(
-      writerRef.current,
-      safe,
-      isFinal
-    );
+    const finalizedLineId = writerRef.current.currentLineId;
+
+    writerRef.current = applySpeechResult(writerRef.current, safe, true);
     setLastPreview(safe.trim());
     setLineCount(writerRef.current.lines.length);
-    pusherRef.current?.push(writerRef.current, isFinal);
+    pusherRef.current?.push(writerRef.current, true);
 
-    if (isFinal) {
-      void pusherRef.current?.flush().then((ok) => {
-        if (ok) setLastPushAt(Date.now());
+    void pusherRef.current?.flush().then((ok) => {
+      if (ok) setLastPushAt(Date.now());
 
-        const line =
-          writerRef.current.lines.find((l) => l.id === finalizedLineId) ??
-          writerRef.current.lines.filter((l) => !l.isCurrent).at(-1);
+      const line =
+        writerRef.current.lines.find((l) => l.id === finalizedLineId) ??
+        writerRef.current.lines.filter((l) => !l.isCurrent).at(-1);
 
-        if (WORD_CLOUD_UI_ENABLED) {
-          const speechForCloud = line?.rawTextEn ?? safe.trim();
-          if (speechForCloud) {
-            wordcloudPusherRef.current?.ingestFinal(speechForCloud);
-          }
+      if (WORD_CLOUD_UI_ENABLED) {
+        const speechForCloud = line?.rawTextEn ?? safe.trim();
+        if (speechForCloud) {
+          wordcloudPusherRef.current?.ingestFinal(speechForCloud);
         }
-
-        if (line?.rawTextEn) {
-          enqueueSubtitleCorrection(
-            () => writerRef.current,
-            (state) => {
-              writerRef.current = state;
-            },
-            pusherRef.current,
-            line.id,
-            line.rawTextEn,
-            (msg) => setPushError(msg)
-          );
-        }
-      });
-    }
+      }
+    });
   }, []);
+
+  const schedulePauseBubble = useCallback(() => {
+    clearPauseBubbleTimer();
+    pauseBubbleTimerRef.current = setTimeout(() => {
+      pauseBubbleTimerRef.current = null;
+      const { currentLineId, lines } = writerRef.current;
+      if (!currentLineId) return;
+      const line = lines.find((l) => l.id === currentLineId);
+      const text = line?.textEn?.trim();
+      if (!text) return;
+      commitFinalSegment(text);
+    }, PAUSE_BUBBLE_MS);
+  }, [clearPauseBubbleTimer, commitFinalSegment]);
+
+  const handleSpeechResult = useCallback(
+    (transcript: string, isFinal: boolean) => {
+      const safe = sanitizeSpeechText(transcript);
+      if (!safe.trim()) {
+        if (isFinal) clearPauseBubbleTimer();
+        return;
+      }
+
+      if (isFinal) {
+        clearPauseBubbleTimer();
+        const lastClosed = writerRef.current.lines
+          .filter((l) => !l.isCurrent)
+          .at(-1);
+        if (lastClosed?.textEn.trim() === safe.trim()) {
+          return;
+        }
+        commitFinalSegment(safe);
+        return;
+      }
+
+      writerRef.current = applySpeechResult(writerRef.current, safe, false);
+      setLastPreview(safe.trim());
+      setLineCount(writerRef.current.lines.length);
+      pusherRef.current?.push(writerRef.current, false);
+
+      const current = writerRef.current.lines.find(
+        (l) => l.id === writerRef.current.currentLineId
+      );
+      if (
+        current &&
+        current.textEn.length >= MAX_SUBTITLE_BUBBLE_CHARS
+      ) {
+        clearPauseBubbleTimer();
+        commitFinalSegment(current.textEn);
+        return;
+      }
+
+      schedulePauseBubble();
+    },
+    [clearPauseBubbleTimer, commitFinalSegment, schedulePauseBubble]
+  );
 
   const startRecognizer = useCallback(() => {
     if (!micEnabled || meta.status !== "live") return;
@@ -299,9 +379,25 @@ export function SpeechBridge() {
     };
   }, [meta.status, micEnabled, startRecognizer, stopRecognizer]);
 
-  const enableMic = useCallback(() => {
-    setMicEnabled(true);
+  const enableMic = useCallback(async () => {
     setSpeechError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setSpeechError("Microphone API not available in this browser.");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setMicEnabled(true);
+    } catch (err) {
+      const message =
+        err instanceof DOMException && err.name === "NotAllowedError"
+          ? "Microphone permission denied — allow mic access for this site in Chrome."
+          : err instanceof Error
+            ? err.message
+            : "Could not access microphone.";
+      setSpeechError(message);
+    }
   }, []);
 
   const session = getSessionInfo();
@@ -424,7 +520,7 @@ export function SpeechBridge() {
             {!micEnabled ? (
               <Button
                 type="button"
-                onClick={enableMic}
+                onClick={() => void enableMic()}
                 disabled={!supported}
                 className="gap-2 bg-live-active text-white hover:bg-live-active/90"
               >

@@ -19,7 +19,10 @@ export function createSubtitleWriterState(
   };
 }
 
-/** Apply one Web Speech result (cumulative transcript for current utterance). */
+/** Readable bubble size when the API does not emit a final segment. */
+export const MAX_SUBTITLE_BUBBLE_CHARS = 200;
+
+/** Apply one Web Speech phrase segment (not a running session transcript). */
 export function applySpeechResult(
   state: SubtitleWriterState,
   transcript: string,
@@ -44,7 +47,20 @@ export function applySpeechResult(
     });
   } else {
     const idx = lines.findIndex((l) => l.id === currentLineId);
-    if (idx >= 0) {
+    if (idx < 0) {
+      lines = lines.map((l) =>
+        l.isCurrent ? { ...l, isCurrent: false } : l
+      );
+      currentLineId = crypto.randomUUID();
+      lines.push({
+        id: currentLineId,
+        textEn: trimmed,
+        translations: {},
+        ...(isFinal
+          ? { rawTextEn: trimmed, isCurrent: false }
+          : { isCurrent: true }),
+      });
+    } else {
       lines[idx] = {
         ...lines[idx],
         textEn: trimmed,

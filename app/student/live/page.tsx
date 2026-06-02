@@ -27,11 +27,6 @@ export default function LivePage() {
               <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-tab-live md:text-xs">
                 <span className="h-1.5 w-1.5 animate-pulse-live rounded-full bg-live-active" />
                 Live
-                {locale === "en" && (
-                  <span className="font-normal normal-case text-muted">
-                    · Corrected
-                  </span>
-                )}
               </span>
             )}
             {meta.status === "paused" && (

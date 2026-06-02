@@ -201,69 +201,10 @@ export function PresenterDashboard() {
             </div>
           </header>
 
-          <PresenterJoinPanel />
-
           <LiveMessagePanel />
 
-          {/* Projector content — what /display shows before OBS SphereNotes scene */}
-          <section className="mb-6 rounded-xl bg-surface p-4 shadow-card md:p-6">
-            <div className="mb-4 flex items-start gap-3">
-              <Monitor className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">
-                  Show on projector
-                </h2>
-                <p className="mt-1 text-xs leading-relaxed text-muted">
-                  Step 1: pick content below. Step 2: tap{" "}
-                  <strong>SphereNotes</strong> in the OBS bar. Slides and camera
-                  use the other OBS buttons — not this section.
-                </p>
-              </div>
-            </div>
-
-            <div
-              className={cn(
-                "grid gap-2",
-                WORD_CLOUD_UI_ENABLED ? "sm:grid-cols-3" : "sm:grid-cols-2"
-              )}
-            >
-              {WORD_CLOUD_UI_ENABLED && (
-                <ProjectorButton
-                  icon={Cloud}
-                  label="Word cloud"
-                  description="Live words from your teaching"
-                  active={displayMode === "wordcloud"}
-                  onClick={() => setDisplay("wordcloud")}
-                />
-              )}
-              <ProjectorButton
-                icon={MessageCircleQuestion}
-                label="Top question"
-                description={
-                  topQuestion
-                    ? `${topQuestion.votes} votes — highest so far`
-                    : "No questions yet"
-                }
-                active={
-                  displayMode === "question" &&
-                  displayQuestion?.id === topQuestion?.id
-                }
-                disabled={!topQuestion}
-                onClick={() => topQuestion && showQuestionOnProjector(topQuestion)}
-              />
-              <ProjectorButton
-                icon={Square}
-                label="Clear"
-                description="Blank SphereNotes display"
-                active={displayMode === "idle"}
-                onClick={() => setDisplay("idle")}
-                variant="muted"
-              />
-            </div>
-          </section>
-
           {/* Questions — choose which one to show */}
-          <section className="rounded-xl bg-surface p-4 shadow-card md:p-6">
+          <section className="mb-6 rounded-xl bg-surface p-4 shadow-card md:p-6">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">
@@ -271,7 +212,7 @@ export function PresenterDashboard() {
                 </h2>
                 <p className="mt-1 text-xs text-muted">
                   Tap <strong>Show</strong> on any question to put it on the
-                  projector. Use &ldquo;Top question&rdquo; above for the most
+                  projector. Use &ldquo;Top question&rdquo; below for the most
                   upvoted one.
                 </p>
               </div>
@@ -344,6 +285,65 @@ export function PresenterDashboard() {
                   );
                 })
               )}
+            </div>
+          </section>
+
+          <PresenterJoinPanel />
+
+          {/* Projector content — what /display shows before OBS SphereNotes scene */}
+          <section className="mb-6 rounded-xl bg-surface p-4 shadow-card md:p-6">
+            <div className="mb-4 flex items-start gap-3">
+              <Monitor className="mt-0.5 h-5 w-5 shrink-0 text-muted" />
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Show on projector
+                </h2>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Step 1: pick content below. Step 2: tap{" "}
+                  <strong>SphereNotes</strong> in the OBS bar. Slides and camera
+                  use the other OBS buttons — not this section.
+                </p>
+              </div>
+            </div>
+
+            <div
+              className={cn(
+                "grid gap-2",
+                WORD_CLOUD_UI_ENABLED ? "sm:grid-cols-3" : "sm:grid-cols-2"
+              )}
+            >
+              {WORD_CLOUD_UI_ENABLED && (
+                <ProjectorButton
+                  icon={Cloud}
+                  label="Word cloud"
+                  description="Live words from your teaching"
+                  active={displayMode === "wordcloud"}
+                  onClick={() => setDisplay("wordcloud")}
+                />
+              )}
+              <ProjectorButton
+                icon={MessageCircleQuestion}
+                label="Top question"
+                description={
+                  topQuestion
+                    ? `${topQuestion.votes} votes — highest so far`
+                    : "No questions yet"
+                }
+                active={
+                  displayMode === "question" &&
+                  displayQuestion?.id === topQuestion?.id
+                }
+                disabled={!topQuestion}
+                onClick={() => topQuestion && showQuestionOnProjector(topQuestion)}
+              />
+              <ProjectorButton
+                icon={Square}
+                label="Clear"
+                description="Blank SphereNotes display"
+                active={displayMode === "idle"}
+                onClick={() => setDisplay("idle")}
+                variant="muted"
+              />
             </div>
           </section>
         </div>

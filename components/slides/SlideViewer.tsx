@@ -1,5 +1,6 @@
 "use client";
 
+import { SlideCaptionLine } from "@/components/slides/SlideCaptionLine";
 import { SlideFullscreenView } from "@/components/slides/SlideFullscreenView";
 import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { useLocale } from "@/hooks/useMineNotes";
@@ -133,9 +134,7 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background from-40% via-background/80 to-transparent px-4 pb-3 pt-6">
             <div className="pointer-events-auto mx-auto max-w-3xl text-center">
               {subtitleText ? (
-                <p className="text-sm leading-snug text-foreground sm:text-base">
-                  {subtitleText}
-                </p>
+                <SlideCaptionLine text={subtitleText} />
               ) : (
                 <p className="text-sm text-muted">No subtitles yet</p>
               )}

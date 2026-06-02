@@ -8,7 +8,13 @@ export class SubtitlePusher {
   private pending: SubtitleWriterState | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private lastPushAt = 0;
+  private lastFlushFinishedAt = 0;
   private flushing = false;
+
+  /** Skip realtime reload when this client just wrote the same row. */
+  shouldIgnoreExternalSync(withinMs = 1200): boolean {
+    return Date.now() - this.lastFlushFinishedAt < withinMs;
+  }
 
   constructor(
     private eventId: string,
@@ -66,6 +72,7 @@ export class SubtitlePusher {
       this.onError?.(error.message);
       return false;
     }
+    this.lastFlushFinishedAt = Date.now();
     return true;
   }
 

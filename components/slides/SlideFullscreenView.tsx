@@ -1,5 +1,6 @@
 "use client";
 
+import { SlideCaptionLine } from "@/components/slides/SlideCaptionLine";
 import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useLocale } from "@/hooks/useMineNotes";
@@ -196,9 +197,7 @@ export function SlideFullscreenView({
 
         {subtitlesOn && subtitleText && (
           <div className="shrink-0 px-3 pb-2 pt-1">
-            <p className="line-clamp-2 text-center text-sm leading-snug text-foreground">
-              {subtitleText}
-            </p>
+            <SlideCaptionLine text={subtitleText} />
           </div>
         )}
       </button>

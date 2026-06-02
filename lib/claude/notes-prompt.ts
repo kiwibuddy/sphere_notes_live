@@ -2,8 +2,7 @@ import type { NoteCard } from "@/types/session";
 import { summarizeNoteCard } from "@/lib/claude/notes-schema";
 
 export function buildNotesPrompt(params: {
-  transcript: string;
-  newSinceChars: number;
+  newTranscript: string;
   existingCards?: Pick<NoteCard, "type" | "content">[];
   existingSummaries?: string[];
   scriptureJson: Record<string, Record<string, string>>;
@@ -15,11 +14,6 @@ export function buildNotesPrompt(params: {
   const existing = merged.length > 0 ? merged.join("\n") : "(none yet)";
 
   const scriptureBlock = JSON.stringify(params.scriptureJson, null, 2);
-
-  const focusHint =
-    params.newSinceChars > 0
-      ? `\nFocus on material from roughly the last ${params.newSinceChars} characters of the transcript (new teaching since the last extraction). Still use the full transcript for context.\n`
-      : "";
 
   return `You extract structured study notes from live classroom teaching (Biblical Worldview / theology). Return ONLY valid JSON — no markdown fences, no commentary.
 
@@ -41,13 +35,14 @@ Rules:
 - Do not invent scripture references. If a passage is cited and appears in the scripture lookup below, copy text from there (match translation).
 - Keep quotes and bullets faithful to the transcript; light cleanup only.
 - Theology terms (hell, Satan, sin, etc.) are legitimate — do not censor.
-${focusHint}
+- Extract only from the new transcript segment below — not from cards already listed.
+
 Already extracted (do not repeat):
 ${existing}
 
 Scripture lookup (use when reference matches):
 ${scriptureBlock}
 
-Full transcript:
-${params.transcript.trim()}`;
+New transcript since last extraction:
+${params.newTranscript.trim()}`;
 }

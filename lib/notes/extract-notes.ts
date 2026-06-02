@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Json } from "@/lib/supabase/database.types";
 import type { NoteCard } from "@/types/session";
 
-export const NOTES_EXTRACT_INTERVAL_MS = 60_000;
+export const NOTES_EXTRACT_INTERVAL_MS = 600_000;
 const MIN_TRANSCRIPT_CHARS = 120;
 const MIN_NEW_CHARS = 40;
 
@@ -54,7 +54,7 @@ async function insertNoteCards(
   if (error) throw new Error(error.message);
 }
 
-/** Poll while live; extract AI note cards every ~60s from growing transcript. */
+/** Poll while live; extract AI note cards every ~10 min from new transcript. */
 export function startNoteExtraction(params: {
   eventId: string;
   day: number;
@@ -82,12 +82,15 @@ export function startNoteExtraction(params: {
       const existing = await fetchExistingSummaries(params.eventId, params.day);
       const existingSummaries = existing.map(summarizeNoteCard);
 
+      const newTranscript = transcript.slice(lastExtractedLength).trim();
+      if (newTranscript.length < MIN_NEW_CHARS && lastExtractedLength > 0) return;
+
       const res = await fetch("/api/claude/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          transcript,
-          newSinceChars: lastExtractedLength,
+          newTranscript:
+            lastExtractedLength > 0 ? newTranscript : transcript,
           existingSummaries,
         }),
       });

@@ -78,7 +78,6 @@ NEXT_PUBLIC_EVENT_ID=biblical-worldview-2026
 ```
 
 API routes (stubs ready):
-- `POST /api/claude/correct` — subtitle correction
 - `POST /api/claude/notes` — AI note cards
 - `POST /api/translate` — subtitle translation
 

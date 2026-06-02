@@ -52,12 +52,11 @@ export class SpeechRecognizer {
     this.recognition.lang = "en-US";
 
     this.recognition.onresult = (event: SpeechResultEvent) => {
-      let transcript = "";
+      // One callback per phrase segment — do not concatenate finals + interim.
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
+        const segment = event.results[i];
+        callbacks.onResult(segment[0].transcript, segment.isFinal);
       }
-      const isFinal = event.results[event.results.length - 1]?.isFinal ?? false;
-      callbacks.onResult(transcript, isFinal);
     };
 
     this.recognition.onerror = (event: { error: string }) => {
