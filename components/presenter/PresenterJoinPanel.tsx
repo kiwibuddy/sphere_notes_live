@@ -4,7 +4,10 @@ import { useCallback, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/session/context";
-import { formatTeachingDayCaption } from "@/lib/session/day-label";
+import {
+  formatInternalDaySlot,
+  formatSessionTitle,
+} from "@/lib/session/day-label";
 import { buildStudentJoinUrl } from "@/lib/session/join-url";
 import { Copy, Check, Link2 } from "lucide-react";
 
@@ -39,13 +42,10 @@ export function PresenterJoinPanel() {
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             Students scan the QR or open the link on their phones — same Wi‑Fi
-            or your deployed URL.{" "}
-            <strong>
-              {formatTeachingDayCaption(activeDay, dayInfo, meta.totalDays)}
-            </strong>
-            {" "}
-            (URL uses <code className="rounded bg-background px-1">day={activeDay}</code>
-            ). Speech subtitles only appear on phones using this same day number.
+            or your deployed URL. Session:{" "}
+            <strong>{formatSessionTitle(dayInfo, activeDay)}</strong>.{" "}
+            {formatInternalDaySlot(activeDay, meta.totalDays)} — phones must use
+            this link so Live subtitles match the Mac speech tab.
           </p>
         </div>
       </div>

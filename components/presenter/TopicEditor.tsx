@@ -4,7 +4,6 @@ import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TeachingDayPicker } from "@/components/presenter/TeachingDayPicker";
 import { useSession } from "@/lib/session/context";
-import { formatTeachingDayLine } from "@/lib/session/day-label";
 import {
   isoToSessionDateDisplay,
   parseSessionDateToIso,

@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { ReactionsInline } from "@/components/layout/ReactionsInline";
-import { formatTeachingDayLine } from "@/lib/session/day-label";
+import { formatSessionHeader } from "@/lib/session/day-label";
 import { useSession } from "@/lib/session/context";
 
 export function SessionHeader() {
@@ -17,7 +17,7 @@ export function SessionHeader() {
             {meta.title}
           </h1>
           <p className="mt-1 text-xs text-muted md:text-sm">
-            {formatTeachingDayLine(activeDay, dayInfo)} · {meta.presenter}
+            {formatSessionHeader(dayInfo, activeDay)} · {meta.presenter}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-3">
