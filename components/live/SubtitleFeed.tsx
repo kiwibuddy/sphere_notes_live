@@ -1,11 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
-import type { SubtitleLine } from "@/types/session";
-import { SendToMineButton } from "@/components/cards/SendToMineButton";
-import { isIOS } from "@/lib/device/ios";
+import { SubtitleBubble } from "@/components/live/SubtitleBubble";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef } from "react";
+import type { SubtitleLine } from "@/types/session";
+import { AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 interface SubtitleFeedProps {
   lines: SubtitleLine[];
@@ -13,6 +12,7 @@ interface SubtitleFeedProps {
   fontSize: number;
   onSendToMine?: (text: string) => void;
   readOnly?: boolean;
+  className?: string;
 }
 
 export function SubtitleFeed({
@@ -21,77 +21,96 @@ export function SubtitleFeed({
   fontSize,
   onSendToMine,
   readOnly,
+  className,
 }: SubtitleFeedProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const reduceMotion = isIOS();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollRef.current;
+    if (!el || !stickToBottomRef.current) return;
+
+    const run = () => {
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    };
+
+    run();
+    requestAnimationFrame(run);
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  }, []);
+
+  const linesKey = lines
+    .map((l) => `${l.id}|${l.textEn}|${l.isCurrent ? 1 : 0}`)
+    .join("§");
+
+  useLayoutEffect(() => {
+    scrollToBottom(lines.length <= 1 ? "auto" : "smooth");
+  }, [linesKey, scrollToBottom, lines.length]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [lines]);
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const distanceFromBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight;
+      stickToBottomRef.current = distanceFromBottom < 80;
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
 
   if (lines.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted">
-        Waiting for live speech…
-      </p>
+      <div
+        className={cn(
+          "flex flex-1 flex-col items-center justify-center px-4 py-12",
+          className
+        )}
+      >
+        <div className="max-w-xs rounded-2xl bg-surface px-5 py-4 text-center shadow-card ring-1 ring-border">
+          <p className="text-sm text-muted">
+            Waiting for live speech…
+          </p>
+          <p className="mt-2 text-xs text-muted/80">
+            Captions appear here as the presenter speaks.
+          </p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-4">
-      {lines.map((line) => {
-        const text =
-          locale === "en"
-            ? line.textEn
-            : line.translations[locale] ?? line.textEn;
+    <div
+      ref={scrollRef}
+      className={cn(
+        "min-h-0 flex-1 overflow-y-auto overflow-x-hidden",
+        "overscroll-y-contain [-webkit-overflow-scrolling:touch]",
+        className
+      )}
+    >
+      <div className="flex min-h-full flex-col justify-end gap-3 px-1 py-4 pb-8">
+        <AnimatePresence initial={false} mode="popLayout">
+          {lines.map((line) => {
+            const text =
+              locale === "en"
+                ? line.textEn
+                : line.translations[locale] ?? line.textEn;
 
-        const inner = (
-          <>
-            <p
-              className={cn(
-                "leading-relaxed text-foreground",
-                line.isCurrent ? "font-medium" : "text-muted"
-              )}
-              style={{ fontSize: `${fontSize}px` }}
-            >
-              {text}
-            </p>
-            {line.isCurrent && !readOnly && onSendToMine && (
-              <div className="mt-2">
-                <SendToMineButton onSend={() => onSendToMine(text)} />
-              </div>
-            )}
-          </>
-        );
-
-        if (reduceMotion) {
-          return (
-            <div
-              key={line.id}
-              className={cn(
-                "relative rounded-lg px-1 py-1",
-                line.isCurrent && "border-l-2 border-tab-live pl-3"
-              )}
-            >
-              {inner}
-            </div>
-          );
-        }
-
-        return (
-          <motion.div
-            key={line.id}
-            layout
-            className={cn(
-              "relative rounded-lg px-1 py-1 transition-colors",
-              line.isCurrent && "border-l-2 border-tab-live pl-3"
-            )}
-          >
-            {inner}
-          </motion.div>
-        );
-      })}
-      <div ref={bottomRef} aria-hidden className="h-px shrink-0" />
+            return (
+              <SubtitleBubble
+                key={line.id}
+                line={line}
+                text={text}
+                fontSize={line.isCurrent ? fontSize : Math.max(13, fontSize - 2)}
+                readOnly={readOnly}
+                onSendToMine={onSendToMine}
+              />
+            );
+          })}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
