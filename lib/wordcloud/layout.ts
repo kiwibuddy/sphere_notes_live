@@ -48,45 +48,29 @@ function collides(
   );
 }
 
-/** Size from repetition count — keeps a visible gap between rare and common words. */
-function fontSizeForCount(
+/**
+ * Font size from repetition (log scale) + list rank when counts are tied.
+ * Avoids the old bug where maxCount===1 made every word target max size.
+ */
+export function computeWordFontSize(
   count: number,
   maxCount: number,
-  minFont: number,
-  maxFont: number
-): number {
-  if (maxCount <= 1) return maxFont;
-  const ratio = count / maxCount;
-  const floor = 0.32;
-  const emphasis = floor + (1 - floor) * Math.pow(ratio, 0.35);
-  return minFont + emphasis * (maxFont - minFont);
-}
-
-/** Rank-based tier so the top words stay huge even when the canvas is crowded. */
-function fontSizeForRank(
   rank: number,
+  total: number,
   minFont: number,
   maxFont: number
 ): number {
-  if (rank === 0) return maxFont;
-  if (rank === 1) return maxFont * 0.78;
-  if (rank === 2) return maxFont * 0.65;
-  if (rank <= 5) return maxFont * 0.5;
-  if (rank <= 10) return maxFont * 0.38;
-  if (rank <= 18) return maxFont * 0.28;
-  return minFont;
-}
+  const rankPart =
+    total <= 1 ? 1 : 1 - rank / Math.max(total - 1, 1);
 
-function targetFontSize(
-  item: WordCloudWord,
-  rank: number,
-  maxCount: number,
-  minFont: number,
-  maxFont: number
-): number {
-  const byCount = fontSizeForCount(item.count, maxCount, minFont, maxFont);
-  const byRank = fontSizeForRank(rank, minFont, maxFont);
-  return Math.max(byCount, byRank);
+  if (maxCount <= 1) {
+    const blend = Math.pow(Math.max(0, rankPart), 0.75);
+    return minFont + blend * (maxFont - minFont);
+  }
+
+  const countPart = Math.log(count + 1) / Math.log(maxCount + 1);
+  const blend = 0.85 * countPart + 0.15 * rankPart;
+  return minFont + Math.pow(Math.max(0, Math.min(1, blend)), 0.7) * (maxFont - minFont);
 }
 
 function tryPlaceWord(
@@ -99,7 +83,8 @@ function tryPlaceWord(
   width: number,
   height: number,
   margin: number,
-  maxSteps: number
+  maxSteps: number,
+  allowOverlap: boolean
 ): PlacedWord | null {
   const { width: w, height: h } = measureWord(ctx, item.word, fontSize);
 
@@ -117,9 +102,11 @@ function tryPlaceWord(
       x + w <= width - margin &&
       y + h <= height - margin;
 
+    const pad = allowOverlap ? 1 : 5;
     if (
       inBounds &&
-      !placed.some((p) => collides(candidate, p, 4))
+      (allowOverlap ||
+        !placed.some((p) => collides(candidate, p, pad)))
     ) {
       return {
         word: item.word,
@@ -133,8 +120,8 @@ function tryPlaceWord(
       };
     }
 
-    angle += 0.32;
-    radius += 0.38;
+    angle += 0.28;
+    radius += 0.35;
   }
 
   return null;
@@ -149,39 +136,58 @@ export function layoutWordCloud(
   if (width <= 0 || height <= 0 || words.length === 0) return [];
 
   const sorted = [...words]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 40);
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .slice(0, 32);
 
+  const total = sorted.length;
   const maxCount = Math.max(...sorted.map((w) => w.count), 1);
   const minDim = Math.min(width, height);
-  const minFont = Math.max(12, minDim * 0.034);
-  const maxFont = Math.max(minFont + 20, minDim * 0.26);
+  const minFont = Math.max(11, minDim * 0.028);
+  const maxFont = Math.max(minFont + 22, minDim * 0.34);
   const placed: PlacedWord[] = [];
   const cx = width / 2;
   const cy = height / 2;
-  const margin = 6;
+  const margin = 4;
 
   sorted.forEach((item, rank) => {
-    const target = targetFontSize(item, rank, maxCount, minFont, maxFont);
-    const minAllowed = Math.max(minFont, target * 0.82);
+    const fontSize = computeWordFontSize(
+      item.count,
+      maxCount,
+      rank,
+      total,
+      minFont,
+      maxFont
+    );
 
-    let placedWord: PlacedWord | null = null;
-    const steps = rank < 3 ? 1200 : 700;
+    const isHero = rank === 0;
+    const allowOverlap = rank <= 2;
 
-    for (let fontSize = target; fontSize >= minAllowed; fontSize -= 1) {
-      placedWord = tryPlaceWord(
-        ctx,
-        item,
+    let placedWord = tryPlaceWord(
+      ctx,
+      item,
+      fontSize,
+      placed,
+      cx,
+      cy,
+      width,
+      height,
+      margin,
+      isHero ? 1 : 900,
+      allowOverlap
+    );
+
+    if (!placedWord && isHero) {
+      const { width: w, height: h } = measureWord(ctx, item.word, fontSize);
+      placedWord = {
+        word: item.word,
+        x: cx - w / 2,
+        y: cy - h / 2,
+        width: w,
+        height: h,
         fontSize,
-        placed,
-        cx,
-        cy,
-        width,
-        height,
-        margin,
-        steps
-      );
-      if (placedWord) break;
+        count: item.count,
+        category: item.category,
+      };
     }
 
     if (placedWord) {
@@ -208,7 +214,9 @@ export function drawWordCloud(
     ctx.clearRect(0, 0, width, height);
   }
 
-  for (const item of placed) {
+  const drawOrder = [...placed].sort((a, b) => a.fontSize - b.fontSize);
+
+  for (const item of drawOrder) {
     const isPulsing = pulseWord === item.word;
     const scale = isPulsing ? 1 + 0.08 * Math.sin(pulsePhase * Math.PI * 2) : 1;
     const fontSize = item.fontSize * scale;
