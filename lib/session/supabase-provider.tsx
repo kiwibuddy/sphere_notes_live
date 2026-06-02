@@ -44,8 +44,7 @@ import {
   mapWordcloudJson,
 } from "@/lib/session/supabase-mappers";
 import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
-import { appendManualSubtitle } from "@/lib/speech/append-manual-subtitle";
-import { createSubtitleWriterState } from "@/lib/speech/subtitle-writer";
+import { pushLiveMessageToSubtitles } from "@/lib/speech/push-live-message";
 import { resetWordcloudForDay } from "@/lib/wordcloud/simulation";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type { Json } from "@/lib/supabase/database.types";
@@ -603,8 +602,8 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
           filter: `event_id=eq.${eventId}`,
         },
         (payload) => {
-          const row = payload.new as { day: number; lines: unknown };
-          if (row.day !== activeDay) return;
+          const row = payload.new as { day: number | string; lines: unknown };
+          if (Number(row.day) !== activeDay) return;
           setSubtitles(mapSubtitleLines(row.lines));
         }
       )
@@ -1001,42 +1000,62 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       const trimmed = text.trim();
       if (!trimmed) return false;
 
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("day_subtitles")
-        .select("lines, full_transcript")
-        .eq("event_id", eventId)
-        .eq("day", LIVE_SYNC_DAY)
-        .maybeSingle();
+      try {
+        const apiRes = await withTimeout(
+          fetch("/api/presenter/live-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: trimmed, eventId }),
+          }),
+          12_000,
+          "Send live message"
+        );
 
-      if (error) {
-        console.error("[session] send live message fetch failed", error.message);
-        return false;
+        if (apiRes.ok) {
+          const payload = (await apiRes.json()) as { lines?: unknown };
+          if (payload.lines) {
+            setSubtitles(mapSubtitleLines(payload.lines));
+          }
+          return true;
+        }
+
+        if (apiRes.status !== 503) {
+          console.error("[session] send live message API failed", apiRes.status);
+          return false;
+        }
+      } catch (err) {
+        if (!(err instanceof TimeoutError)) {
+          console.warn("[session] live message API unavailable", err);
+        }
       }
 
-      const state = createSubtitleWriterState(
-        mapSubtitleLines(data?.lines ?? []),
-        data?.full_transcript ?? ""
+      const uid = await withTimeout(
+        ensureSupabaseAuth(),
+        10_000,
+        "Sign in to send"
       );
-      const next = appendManualSubtitle(state, trimmed);
-
-      const { error: updateError } = await supabase
-        .from("day_subtitles")
-        .update({
-          lines: next.lines as unknown as Json,
-          full_transcript: next.fullTranscript,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("event_id", eventId)
-        .eq("day", LIVE_SYNC_DAY);
-
-      if (updateError) {
-        console.error("[session] send live message update failed", updateError.message);
+      if (!uid) {
+        console.error("[session] send live message: not signed in");
         return false;
       }
 
-      setSubtitles(mapSubtitleLines(next.lines));
-      return true;
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const result = await withTimeout(
+          pushLiveMessageToSubtitles(supabase, eventId, trimmed),
+          12_000,
+          "Save live message"
+        );
+        if (!result.ok) {
+          console.error("[session] send live message failed", result.error);
+          return false;
+        }
+        setSubtitles(result.lines);
+        return true;
+      } catch (err) {
+        console.error("[session] send live message failed", err);
+        return false;
+      }
     },
     [eventId]
   );

@@ -24,14 +24,28 @@ export function LiveMessagePanel() {
     setSending(true);
     setError(null);
     try {
-      const ok = await sendLiveMessage(trimmed);
+      const ok = await Promise.race([
+        sendLiveMessage(trimmed),
+        new Promise<boolean>((_, reject) => {
+          setTimeout(
+            () => reject(new Error("Request timed out — check your connection")),
+            20_000
+          );
+        }),
+      ]);
       if (ok) {
         setText("");
       } else {
-        setError("Could not send — try again.");
+        setError(
+          "Could not send. Make sure you are signed in (Anonymous Auth enabled in Supabase) and try again."
+        );
       }
-    } catch {
-      setError("Could not send — try again.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not send — try again."
+      );
     } finally {
       setSending(false);
     }
