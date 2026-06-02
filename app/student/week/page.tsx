@@ -1,7 +1,9 @@
 "use client";
 
-import { useSession } from "@/lib/session/context";
-import { getWeekDays, buildDayArchive } from "@/lib/mock/week";
+import { useSession } from "@/lib/session/session-context";
+import { useStudentPathBuilder } from "@/hooks/useStudentHref";
+import { getWeekDayList } from "@/lib/archive/week";
+import { useDayArchive } from "@/hooks/useDayArchive";
 import { WeekArchivePanel } from "@/components/week/WeekArchivePanel";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -9,8 +11,9 @@ import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 export default function WeekPage() {
-  const { meta, dayInfo, slides } = useSession();
-  const days = getWeekDays(meta.currentDay, dayInfo);
+  const { meta, dayInfo } = useSession();
+  const studentPath = useStudentPathBuilder();
+  const days = getWeekDayList(meta, dayInfo);
   const selectableDays = days.filter((d) => d.status !== "upcoming");
   const defaultDay =
     selectableDays.find((d) => d.status === "today")?.day ??
@@ -18,19 +21,13 @@ export default function WeekPage() {
     1;
 
   const [selectedDay, setSelectedDay] = useState(defaultDay);
-  const archive = buildDayArchive(
-    selectedDay,
-    meta.currentDay,
-    dayInfo,
-    selectedDay === meta.currentDay ? slides : undefined
-  );
+  const { archive, loading } = useDayArchive(selectedDay);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
-      {/* Day list */}
       <div className="shrink-0 border-b border-border p-4 md:w-72 md:border-b-0 md:border-r md:p-6">
         <p className="mb-4 text-sm text-muted">
-          Review past sessions. Archived days are read-only.
+          Review past sessions. Archived days are read-only (saved on End Day).
         </p>
         <div className="space-y-2">
           {days.map((day) => (
@@ -57,7 +54,7 @@ export default function WeekPage() {
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-muted">{day.date}</p>
+                <p className="text-xs text-muted">{day.date || "—"}</p>
               </div>
               {day.status !== "upcoming" && (
                 <ChevronRight className="h-4 w-4 text-muted md:hidden" />
@@ -66,10 +63,9 @@ export default function WeekPage() {
           ))}
         </div>
 
-        {/* Mobile: link to full-page archive */}
         <div className="mt-4 md:hidden">
           <Link
-            href={`/student/week/${selectedDay}`}
+            href={studentPath(`/student/week/${selectedDay}`)}
             className="block rounded-lg bg-tab-week/10 px-4 py-3 text-center text-sm font-medium text-foreground"
           >
             Open {archive.label} full screen
@@ -77,11 +73,13 @@ export default function WeekPage() {
         </div>
       </div>
 
-      {/* Archive panel — tablet/desktop master-detail */}
       <div className="hidden min-h-0 flex-1 flex-col overflow-hidden md:flex md:p-6">
         <div className="mb-4">
           <p className="font-display text-xl text-foreground">{archive.label}</p>
-          <p className="text-sm text-muted">{archive.date} · Read-only</p>
+          <p className="text-sm text-muted">
+            {archive.date || "—"} · Read-only
+            {loading && " · Loading…"}
+          </p>
         </div>
         <WeekArchivePanel archive={archive} />
       </div>

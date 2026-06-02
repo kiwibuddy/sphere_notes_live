@@ -1,6 +1,6 @@
 # SphereNotes Live — Source of Truth
 
-**Last updated:** 1 June 2026 (late session — student slides UX, responsive layout, fullscreen fix)  
+**Last updated:** 1 June 2026 (transcript export + ASR upgrade path)  
 **Replaces for day-to-day decisions:** `SphereNotesLive-PRD-v1.0.docx` (historical), scattered chat notes  
 **Companion docs:** [Instruction Manual](./instruction-manual.md) · [Design Brief](../SphereNotesLive-DesignBrief.md)
 
@@ -61,7 +61,7 @@ Typical highlight: pick Word cloud or a Question → tap OBS **SphereNotes**.
 | App | Next.js 14, TypeScript, Tailwind, Framer Motion |
 | Live sync | **Supabase Realtime** (not Firebase) |
 | AI | Claude API via `/api/claude/*` |
-| Speech | Web Speech API — **Chrome on Mac only** (`/presenter/speech` — planned) |
+| Speech | **Web Speech API** default — Chrome on Mac (`/presenter/speech` — planned). **Optional upgrade:** Deepgram streaming ASR (see §10 Step 13). **Not using:** Otter / Granola (personal meeting tools — no live broadcast to student phones). |
 | Slides | Keynote → PNG in `public/slides/day-{n}/` + **`slide-bridge.js`** on Mac |
 | OBS remote | WebSocket v5 from iPad browser → Mac OBS (LAN only) |
 | Auth | **Supabase Anonymous Auth** on student join (for vote dedup) — planned |
@@ -109,7 +109,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Item | Status | Notes |
 |------|--------|-------|
 | `/presenter` dashboard | 🟡 | Go Live / Pause / End Day in header; projector + questions; settings gear |
-| Session settings modal (⚙ gear) | ✅ | Week topic, day topic, date; slide folder hint, refresh PNGs, manual slide step (test) |
+| Session settings modal (⚙ gear) | ✅ | Week topic, day topic, **native date picker + Today**; slide folder hint, refresh PNGs, manual slide step (test) |
 | `/presenter/setup` full checklist | ❌ | Partially replaced by settings modal — no mic/Supabase/QR checks yet |
 | `/presenter/speech` (Mac speech bridge) | ❌ | **Required for live** — not built |
 | iPad-friendly touch layout | 🟡 | Large projector + OBS buttons; session controls in header |
@@ -121,6 +121,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Correction dictionary UI | ❌ | Not built |
 | Student join QR + link on presenter | ❌ | Not built |
 | Connection / mic status indicators | ❌ | Not built |
+| End Day transcript download (.txt) | ❌ | `fullTranscript` + subtitles in archive schema; export button not built |
 | Day switcher on main UI | ✅ | **Removed** — End Day advances; see concerns §8 |
 
 ### C. Display (`/display` for OBS)
@@ -150,8 +151,9 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Web Speech → Supabase pipeline | ❌ | `lib/speech.ts` wrapper only |
 | `GET /api/slides` | ✅ | Scans `public/slides/day-{n}/*.png`; any filename; sorts by number (Keynote `.001.png` OK) |
 | slide-bridge.js | ❌ | Stub only — Keynote does **not** auto-advance phone slides yet |
-| Slide PNGs in repo / deploy | 🟡 | **18 PNGs on disk** for day-1 (`The_Kingdom_Blueprint.001.png` … `.018.png`); **not committed to git** as of this session |
-| End Day → archive to Supabase | ❌ | Mock week tab only |
+| Slide PNGs in repo / deploy | 🟡 | **18 PNGs committed** for day-1 (`The_Kingdom_Blueprint.001.png` … `.018.png`); **Vercel deploy + env vars** still needed for phones off dev server |
+| End Day → archive to Supabase | ❌ | Mock week tab only; includes `subtitles` + `fullTranscript` when live |
+| End Day transcript export | ❌ | Download `.txt` / `.md` from presenter after archive (§10 Step 11.5) |
 | Pause stops speech + AI pipelines | ❌ | Status toggles only (mock) |
 
 ### E. Production environment (your Mac / room)
@@ -178,8 +180,12 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 - [x] Settings modal: week/day topics, slide refresh
 - [x] Day 1 Keynote exported → `public/slides/day-1/` (18 PNGs, local)
 - [x] Instruction manual + this doc
+- [x] Student responsive layout (phone bottom tabs / desktop top nav)
+- [x] Slides tab UX: follow current slide, viewport-fit, subtitles overlay, fullscreen
+- [x] Mine notes toolbar + word cloud mock simulation
 - [ ] Read [Instruction Manual](./instruction-manual.md) Part 3
-- [ ] **Commit + push** slide PNGs (or they won’t exist on Vercel)
+- [x] **Commit + push** main session work (3 commits on `main` incl. Day-1 PNGs + docs — see §9)
+- [ ] Commit **date picker** work (`TopicEditor`, `lib/dates/sessionDate.ts`) when ready
 - [ ] Phone on same Wi‑Fi: open `/student/slides` after ⚙ Refresh slides
 - [ ] Configure 6 OBS scenes on Mac
 - [ ] Practice: iPad `/presenter` → Connect OBS → switch scenes
@@ -206,7 +212,8 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 
 - [x] Export Keynote → `public/slides/day-{n}/` (Day 1 done — Keynote names OK)
 - [x] `GET /api/slides` + student Slide tab loads PNGs (dev server; ⚙ Refresh)
-- [ ] Commit PNGs + deploy to Vercel
+- [x] Commit PNGs (Day 1 in git)
+- [ ] Deploy to Vercel + verify CDN slide URLs on phone
 - [ ] Implement `slide-bridge.js` (Keynote → auto slide number on phones)
 - [ ] Multi-device slide sync via Supabase (Phase 1)
 
@@ -214,11 +221,17 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 
 ---
 
-### Phase 3 — Speech & subtitles
+### Phase 3 — Speech, subtitles & translation
 
-- [ ] Build `/presenter/speech` on Mac
-- [ ] Web Speech → Supabase; Claude correct API
-- [ ] Word cloud from transcript (not mock tick)
+**Subtitle speed rule (locked 1 Jun):** Students see text **immediately** from Web Speech interim/final results. English gets Claude correction **in the background** (swap when ready). **Translations use raw speech** — do not wait for Claude. Rest of app stays English; only Live tab + Slides captions translate.
+
+- [ ] Build `/presenter/speech` on Mac Chrome (mic → Web Speech — swappable ASR; see §10 Step 13)
+- [ ] Push interim + final lines to Supabase `speech` / `subtitles` in real time
+- [ ] Accumulate `fullTranscript` in `SpeechState` as session runs
+- [ ] Wire `POST /api/claude/correct` — async on **final** English chunks only
+- [ ] Wire `POST /api/translate` — on **raw** text when student locale ≠ `en` (parallel, not post-Claude)
+- [ ] Student Live tab + Slides captions subscribe to subtitle stream
+- [ ] Word cloud from transcript tokens (replace mock tick — see §10 Step 8)
 
 ---
 
@@ -230,12 +243,14 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 
 ### Phase 5 — Presenter polish
 
-**Partially done in this chat — remaining:**
+**Partially done — remaining:**
 
 - [x] iPad touch layout + 6 OBS WebSocket buttons
 - [x] Push question to `/display` (Show + Top question)
 - [x] `/display` question mode + light theme
 - [x] Settings modal: editable week/day topic + date (localStorage)
+- [x] Session controls inline in presenter header (Go Live / Pause / End Day)
+- [x] Student Slides tab polish (viewport-fit, fullscreen, subtitle overlay)
 - [ ] `/presenter/setup` or expand settings: mic test, Supabase, join QR/link
 - [ ] Q&A pin / archive
 - [ ] Optional: pull quote button; reactions snapshot on projector
@@ -245,7 +260,14 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 
 ### Phase 6 — Q&A, reactions, archive (live)
 
+- [ ] Live Q&A vote dedup + reactions
+- [ ] End Day → `DayArchiveSnapshot` (subtitles, questions, notes, wordcloud, sessionMap, slides, `fullTranscript`)
+- [ ] Presenter **Download transcript** — `.txt` or `.md` after End Day (§10 Step 11.5)
+
 ### Phase 7 — Rehearsal & polish
+
+- [ ] Full dry-run (§5) including transcript download check
+- [ ] **Optional:** ASR upgrade to Deepgram if Web Speech accuracy insufficient (§10 Step 13 — only after one real rehearsal)
 
 ---
 
@@ -276,6 +298,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | 10 | slide-bridge → phone slide updates | n/a | ☐ |
 | 11 | Speak → subtitles + word cloud | n/a | ☐ |
 | 12 | End Day → Week archive | ☐ | ☐ |
+| 13 | Presenter → Download transcript (.txt) | n/a | ☐ |
 
 **Friction log:**
 
@@ -321,27 +344,264 @@ Read these before building backend or running a real class.
 | 7 | **`pre-backend-design.md` stale** | Low | Still mentions Pre-Show QR, stats on projector, `slide-001.png` naming. Use **this file** instead. |
 | 8 | **Pull quotes / stats dropped** | Low | Intentional UX simplification. Display code still has `quote` mode; `stats` removed. Re-add only if you want them. |
 | 9 | **Slides: local vs live sync** | High for live slides | API + PNG loading work on dev server. **slide-bridge** still stub — manual prev/next in ⚙ settings is test-only. Keynote advance won’t update phones until bridge + Supabase. |
-| 10 | **Day 1 PNGs not in git** | **High before deploy** | `public/slides/` is **untracked**. Slides won’t appear on Vercel or another machine until you `git add`, commit, and push (or re-export on deploy machine). |
+| 10 | **Day 1 PNGs — committed, not deployed** | Medium | PNGs are in git (commit `922701a`). They still won’t load on phones until you **deploy to Vercel** (or use Mac IP + `npm run dev`). |
 | 11 | **End Day in mock** | Low | Advances day in presenter localStorage only; student week archive is mock data, not tied to your live End Day click on another device. |
 | 12 | **Manual slide step vs Keynote** | Medium | ⚙ Settings slide prev/next updates session state for preview only — not wired to Keynote or student phones across devices. |
+| 13 | **Uncommitted date-picker work** | Low | `TopicEditor` date input + `lib/dates/sessionDate.ts` modified but not committed. |
+| 14 | **README vs responsive UI** | Low | README still says “resize browser to 390px”; app is full-width with bottom tabs on phone — update README when convenient. |
+| 15 | **Slides tab subtitles ≠ live speech** | Medium | Overlay shows **mock** subtitle lines from fixtures, not Mac transcription. Live tab is the intended home for real subtitles (Phase 3). |
+| 16 | **PDF ≠ slide sync** | Medium | You asked about PDF for slide test — app only serves **PNG** from `public/slides/day-N/`. Export Keynote → Images, or convert PDF → PNG sequence first. |
+| 17 | **Fullscreen + session ticks** | Low (fixed) | Word cloud mock tick re-rendered parent every ~2.8s and exited fullscreen — fixed. Watch for similar patterns in new code. |
+| 18 | **No Supabase package yet** | High for backend | `@supabase/supabase-js` not in `package.json`; client is commented stub. Must install before Phase 1. |
+| 19 | **Otter / Granola not in stack** | Low (decision locked) | Personal meeting transcribers — no live push to student phones. Use in-app archive + transcript download instead. Upgrade ASR via Deepgram (§10 Step 13) if needed — not a second parallel app. |
 
 ---
 
-## 9. Changelog (this chat session)
+## 9. Changelog
 
-| Date | Change |
-|------|--------|
-| 1 Jun 2026 | Pre-backend design doc + instruction manual created |
-| 1 Jun 2026 | Locked 3-screen layout: iPad / MacBook / external monitor |
-| 1 Jun 2026 | OBS: Desktop replaces Pre-Show QR; 6 scenes in app |
-| 1 Jun 2026 | Built OBS WebSocket bar on `/presenter` |
-| 1 Jun 2026 | Simplified presenter: removed day switcher, stats, quote buttons from projector |
-| 1 Jun 2026 | Added question **Show** + **Top question** + `/display` question mode |
-| 1 Jun 2026 | **Editable week topic, day topic, date** — persisted in localStorage; shown on student header, `/display` idle, week archive (same browser) |
-| 1 Jun 2026 | **`GET /api/slides`** — discovers any `.png` in `public/slides/day-{n}/`; Keynote export names (e.g. `Presentation.001.png`) supported |
-| 1 Jun 2026 | **⚙ Settings modal** — topics + slide refresh/preview moved off main presenter screen |
-| 1 Jun 2026 | Day 1 Keynote exported: 18 PNGs → `public/slides/day-1/` (local disk; not yet committed) |
-| 1 Jun 2026 | Display idle/light theme unified |
+### Session 1 (1 Jun 2026 — morning)
+
+| Change |
+|--------|
+| Pre-backend design doc + instruction manual created |
+| Locked 3-screen layout: iPad / MacBook / external monitor |
+| OBS: Desktop replaces Pre-Show QR; 6 scenes in app |
+| Built OBS WebSocket bar on `/presenter` |
+| Simplified presenter: removed day switcher, stats, quote buttons from projector |
+| Added question **Show** + **Top question** + `/display` question mode |
+| **Editable week topic, day topic, date** — localStorage; student header, `/display` idle, week archive |
+| **`GET /api/slides`** — any `.png` in `public/slides/day-{n}/`; Keynote names OK |
+| **⚙ Settings modal** — topics + slide refresh/preview off main screen |
+| Day 1 Keynote exported: 18 PNGs → `public/slides/day-1/` (local; not committed) |
+| Display idle/light theme unified |
+
+### Session 2 (1 Jun 2026 — late)
+
+| Change |
+|--------|
+| **5-tab student nav** locked: Live · Q&A · Slides · Notes · Week (Notes sub-nav: auto / mine / cloud / overview) |
+| **Responsive shell:** bottom tabs (phone), top nav (md+), full width, `h-dvh` overflow hidden |
+| **Slides tab:** current slide only — no thumbnails, count, or prev/next |
+| Slide fills **95% of content height** (height-driven sizing); no page scroll |
+| Subtitles: controls **top-right**; caption text **bottom** when on (mock data) |
+| **Slide fullscreen** view + fix for auto-exit after ~3s (session re-render / effect deps) |
+| Presenter: Go Live / Pause / End Day **inline in header** |
+| Mine notes: format toolbar; cloud clippings as JPEG snapshots |
+| Word cloud: mock growth while live; session / 5 min filter |
+| Session context: hydration fix (localStorage after mount, default Day 1) |
+| Mock slide placeholders: full-bleed SVG (no inset card padding) |
+
+### Session 3 (1 Jun 2026 — end of day)
+
+| Change |
+|--------|
+| **Date field:** native `<input type="date">` + **Today** button in ⚙ Settings (`lib/dates/sessionDate.ts`) |
+| Docs end-of-session review; **backend checklist** added (§10) |
+| Confirmed: Day-1 PNGs + docs **committed and pushed** (`922701a`, `27deef5`, `24eae03`) |
+| Locked **instant subtitle** rule: raw/interim first; Claude corrects English async; translate raw (not corrected) |
+
+### Session 4 (1 Jun 2026 — transcript + ASR decisions)
+
+| Change |
+|--------|
+| **End Day transcript download** added to roadmap (§10 Step 11.5, Phase 6, dry-run #13) |
+| **ASR upgrade path** documented — Deepgram optional after rehearsal (§10 Step 13) |
+| **Otter / Granola explicitly excluded** — not compatible with live student broadcast; use in-app archive instead |
+
+---
+
+## 10. Backend implementation checklist
+
+**Read this before your next build session.** Order matters — each step depends on the one above.
+
+Legend: **You** = your Mac / accounts · **Build** = code to write · **Test** = verify before moving on
+
+### Step 0 — Accounts & API keys **(You, one-time)**
+
+| # | Action | Notes |
+|---|--------|-------|
+| 0.1 | Create **Supabase** project | Free tier OK for event |
+| 0.2 | Get **Anthropic** API key | Claude Haiku for correction + notes |
+| 0.3 | Enable **Google Cloud Translation** API + key | NMT for live subtitles only |
+| 0.4 | Connect repo to **Vercel** | Import from GitHub |
+| 0.5 | Add env vars locally (`.env.local`) **and** on Vercel | See Step 1.4 |
+
+### Step 1 — Supabase foundation **(Build + You)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 1.1 | `npm install @supabase/supabase-js` | Not in package.json yet |
+| 1.2 | Uncomment / implement `lib/supabase/client.ts` | Browser client with anon key |
+| 1.3 | Create schema matching `types/realtime.ts` paths | Tables or Realtime channels for: `meta`, `slide`, `speech`, `subtitles`, `wordcloud`, `questions`, `notes`, `reactions`, `display`, `archive` under `events/{eventId}/days/{day}/` |
+| 1.4 | Set RLS policies | Students: read session, write own votes/reactions/questions. Presenter: write meta/display/status. Service role for slide-bridge + server routes only |
+| 1.5 | Env vars | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server + slide-bridge only), `ANTHROPIC_API_KEY`, `GOOGLE_TRANSLATE_API_KEY` |
+| 1.6 | Build `SupabaseSessionProvider` | Replace `MockSessionProvider` when env vars present (`lib/session/provider.ts` already switches on env) |
+| 1.7 | Keep mock flag | `npm run dev` without keys still uses mock |
+| **Test** | Two browsers: Go Live on iPad presenter → phone shows LIVE | Also: week/day topic edits appear on both |
+
+### Step 2 — URL join & anonymous auth **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 2.1 | Wire `?event=biblical-worldview-2026&day=N` on `/student` | Subscribe to that event/day in Supabase — not presenter localStorage |
+| 2.2 | Silent **Supabase Anonymous Auth** on student load | Enables vote dedup via `voters/{uid}` |
+| 2.3 | Presenter join QR + link on `/presenter` or settings | URL shape: `{APP_URL}/student?event=…&day=N` |
+| **Test** | Phone opens link → correct day, can vote once per question |
+
+### Step 3 — Multi-device session sync **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 3.1 | Sync `status` (waiting/live/paused), `meta`, `display`, `questions`, `reactions` | iPad presenter writes; phones + `/display` subscribe |
+| 3.2 | `/display` reads Supabase display state | So OBS browser source matches iPad “Show on projector” even on different devices |
+| **Test** | iPad Go Live → phone LIVE badge. iPad Show question → Mac `/display` updates |
+
+### Step 4 — Slide PNGs on production **(You + Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 4.1 | Day PNGs already in git | `public/slides/day-1/*.png` (18 files) |
+| 4.2 | **Deploy to Vercel** | Push + verify build |
+| 4.3 | Export days 2–4 when ready | Same folder pattern: `public/slides/day-{n}/` |
+| 4.4 | `GET /api/slides` already works | Phones load list after deploy |
+| **Test** | Phone on cellular opens Vercel URL → Slides tab shows Day-1 PNGs after ⚙ Refresh |
+
+### Step 5 — Keynote slide-bridge **(Build + You)**
+
+**Goal:** Advance Keynote on Mac → phone Slides tab updates within ~3s.
+
+| # | Action | Detail |
+|---|--------|--------|
+| 5.1 | Implement `scripts/slide-bridge.js` | Currently a stub |
+| 5.2 | AppleScript poll Keynote every **2s** | Read `slide number of current slide of front document` when `playing is true` |
+| 5.3 | Write to Supabase `events/{eventId}/days/{day}/slide` | `{ current, total, updatedAt }` using **service role** key |
+| 5.4 | Grant Mac **Automation** permission | System Settings → Privacy → Automation: allow Terminal/Node to control Keynote |
+| 5.5 | Run before each session | `node scripts/slide-bridge.js` (env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EVENT_ID`, `DAY`) |
+| 5.6 | Student app subscribes to slide state | Already reads `slides.current` — wire to Supabase |
+| **Test** | Advance Keynote → phone slide image changes without manual ⚙ prev/next |
+
+**AppleScript core (reference):**
+
+```applescript
+tell application "Keynote"
+  if not (exists front document) then return "0|0"
+  if playing is false then return "0|0"
+  set n to slide number of current slide of front document
+  set t to count of slides of front document
+  return (n as text) & "|" & (t as text)
+end tell
+```
+
+### Step 6 — Speech bridge `/presenter/speech` **(Build + You)**
+
+**Goal:** Mac mic → subtitles on all student phones in real time.
+
+| # | Action | Detail |
+|---|--------|--------|
+| 6.1 | Create `app/presenter/speech/page.tsx` | MacBook Chrome only — not iPad |
+| 6.2 | Use `lib/speech.ts` `SpeechRecognizer` | `continuous: true`, `interimResults: true`, lang `en-US` |
+| 6.3 | Mac audio: lapel mic as **default input** | Same mic as Zoom (see instruction manual Part 2D) |
+| 6.4 | On **interim/final** result → write to Supabase immediately | Path: `speech` + append to `subtitles` list with `{ id, textEn, translations: {}, isCurrent }` |
+| 6.5 | Start listening when session status = `live`; **stop** on `paused` / `waiting` | Call `SpeechRecognizer.pause()` on pause — no break chatter |
+| 6.6 | Presenter UI: mic status, connection indicator, error retry | Red banner on Web Speech errors |
+| **Test** | Speak on Mac → student Live tab shows lines within ~1s (raw English OK) |
+
+### Step 7 — Instant English correction **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 7.1 | Implement `POST /api/claude/correct` | Claude Haiku; optional dictionary from Keynote notes export |
+| 7.2 | On **final** speech chunk only → call correct API **async** | Do **not** block subtitle display |
+| 7.3 | When correction returns → update same subtitle line in Supabase | Student UI swaps text in place |
+| **Test** | Say a deliberate mis-hear → raw appears instantly → corrected version replaces within ~5–15s |
+
+### Step 8 — Instant translation **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 8.1 | Implement `POST /api/translate` | Google Cloud Translation NMT |
+| 8.2 | When student picks non-English locale → translate **raw** `textEn` | Parallel requests per locale; **not** post-Claude |
+| 8.3 | Store in `subtitle.translations[locale]` | Live tab + Slides caption overlay read this |
+| 8.4 | Debounce/cache identical phrases | Reduce API cost |
+| **Test** | Student picks Spanish → sees Spanish within ~1–2s of English raw appearing |
+
+### Step 9 — Live word cloud **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 9.1 | Tokenize incoming transcript | Reuse `lib/wordcloud/simulation.ts` (`tokenize`, `categorize`, `buildSpeechPool`) |
+| 9.2 | Increment word counts in Supabase `wordcloud` | On each final speech chunk (or every N seconds) |
+| 9.3 | Student Notes → Cloud tab + `/display` wordcloud subscribe | Replace mock ~2.8s tick growth |
+| 9.4 | **Pause** freezes cloud | No new tokens while paused |
+| **Test** | Speak “Kingdom”, “Scripture” repeatedly → words grow on phone + projector word cloud |
+
+### Step 10 — AI notes & session map **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 10.1 | Implement `POST /api/claude/notes` | Every ~60s while live; scripture JSON bundled |
+| 10.2 | Write note cards to Supabase `notes` | 7 card types already in UI |
+| 10.3 | Session map segments | Tie notes to time/slide segments |
+| **Test** | Teach 2 min → Auto notes tab gets new cards |
+
+### Step 11 — Q&A, reactions, archive **(Build)**
+
+| # | Action | Detail |
+|---|--------|--------|
+| 11.1 | Live Q&A submit/vote via Supabase | Vote dedup with anonymous uid |
+| 11.2 | Presenter pin / archive questions | UI not built yet |
+| 11.3 | Reactions increment live | Replace mock counts |
+| 11.4 | **End Day** → snapshot to `archive` | Week tab reads real past days; includes `subtitles[]` + `fullTranscript` |
+| 11.5 | **Download transcript** on presenter | After End Day: button → `.txt` or `.md` file with day topic, date, timestamped subtitle lines, and full corrected transcript. Route: `GET /api/archive/{eventId}/{day}/transcript` or client-side blob from archive |
+| **Test** | End Day → Week tab shows archive → Download transcript opens valid `.txt` file |
+
+### Step 12 — Production rehearsal **(You)**
+
+| # | Action |
+|---|--------|
+| 12.1 | Configure 6 OBS scenes (instruction manual Part 2B) |
+| 12.2 | OBS WebSocket enabled; iPad Connect green |
+| 12.3 | Keynote dual-display; slide-bridge running |
+| 12.4 | Mac: Zoom + `/presenter/speech` + Keynote notes |
+| 12.5 | iPad: `/presenter` Home Screen |
+| 12.6 | Run dry-run script (§5) — log friction |
+| 12.7 | After End Day → **Download transcript** and spot-check against what students saw |
+
+### Step 13 — ASR upgrade path (optional — after rehearsal)
+
+**When:** Only if a real session shows Web Speech is too inaccurate for names/theology terms **even after** Claude correction. Do not add Otter or Granola — they do not feed the live student pipeline.
+
+**Default (MVP):** Web Speech API in Chrome — free, interim results, already in `lib/speech.ts`.
+
+| # | Action | Detail |
+|---|--------|--------|
+| 13.1 | Abstract ASR behind one interface | e.g. `lib/speech/provider.ts` — `start()`, `onInterim()`, `onFinal()`, `stop()`; Web Speech and Deepgram both implement it |
+| 13.2 | Add Deepgram streaming SDK | `@deepgram/sdk` — WebSocket from `/presenter/speech` |
+| 13.3 | Env var toggle | `SPEECH_PROVIDER=webspeech` (default) or `deepgram`; `DEEPGRAM_API_KEY` when upgraded |
+| 13.4 | Same downstream pipeline | Interim/final chunks still → Supabase → Claude correct → translate → word cloud — **only the mic→text engine changes** |
+| 13.5 | Cost estimate | ~$0.0043/min (Deepgram Nova) — ~$0.26 for a 60 min session |
+| **Test** | Side-by-side: same 5 min teaching clip — compare Web Speech + Claude vs Deepgram + Claude on name/theology terms |
+
+**Not recommended:** Running Otter/Granola in parallel for a “better personal record” — duplicate systems, transcript won’t match what students saw, extra cost and session-day complexity.
+
+### Dependency map
+
+```
+Step 0 (keys)
+  └─► Step 1 Supabase
+        ├─► Step 2 URL + auth
+        ├─► Step 3 session sync
+        ├─► Step 5 slide-bridge ──► needs Step 1
+        ├─► Step 6 speech ──► needs Step 1 + 3 (live status)
+        │     ├─► Step 7 Claude correct
+        │     ├─► Step 8 translate
+        │     └─► Step 9 word cloud
+        ├─► Step 10 AI notes
+        └─► Step 11 Q&A / archive
+Step 4 Vercel deploy (can parallel Step 1)
+Step 12 rehearsal (after 1–11)
+Step 13 ASR upgrade (optional — after 12, if Web Speech fails rehearsal)
+```
 
 ---
 

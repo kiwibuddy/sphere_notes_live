@@ -174,6 +174,13 @@ export interface SessionContextValue {
   setDisplay: (mode: DisplayMode, payload?: DisplayPayload) => void;
   addClipping: (clipping: Omit<Clipping, "id" | "createdAt">) => void;
   clippings: Clipping[];
+  /** Day this client is subscribed to (URL on student, current_day on presenter). */
+  activeDay: number;
+  /** Event id from join URL or config. */
+  joinEventId: string;
+  /** Full student join URL for QR / copy (presenter). */
+  studentJoinUrl: string;
+  sessionReady: boolean;
 }
 
 export type SupportedLocale =

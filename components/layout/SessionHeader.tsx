@@ -5,8 +5,8 @@ import { ReactionsInline } from "@/components/layout/ReactionsInline";
 import { useSession } from "@/lib/session/context";
 
 export function SessionHeader() {
-  const { meta, getDayInfo } = useSession();
-  const dayInfo = getDayInfo(meta.currentDay);
+  const { meta, getDayInfo, activeDay } = useSession();
+  const dayInfo = getDayInfo(activeDay);
 
   return (
     <header className="shrink-0 border-b border-border px-4 pb-3 pt-3 md:px-6 md:pb-4 md:pt-4 lg:px-8">

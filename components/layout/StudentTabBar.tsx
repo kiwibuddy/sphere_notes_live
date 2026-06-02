@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session/context";
+import { useStudentPathBuilder } from "@/hooks/useStudentHref";
 import { cn } from "@/lib/utils";
 import {
   isTabActive,
@@ -14,6 +15,7 @@ import {
 export function StudentTabBar() {
   const pathname = usePathname();
   const { meta, isTabLiveActive } = useSession();
+  const studentPath = useStudentPathBuilder();
 
   return (
     <nav className="shrink-0 border-t border-border bg-surface px-1 pb-[env(safe-area-inset-bottom)] pt-1 md:hidden">
@@ -21,11 +23,12 @@ export function StudentTabBar() {
         {STUDENT_TABS.map((tab) => {
           const active = isTabActive(pathname, tab);
           const live = isTabLiveEnabled(tab.key, meta.status, isTabLiveActive);
+          const href = studentPath(tab.href);
 
           return (
             <Link
               key={tab.href}
-              href={tab.href}
+              href={href}
               className={cn(
                 "relative flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors",
                 active ? TAB_ACCENT[tab.key] : "text-muted",

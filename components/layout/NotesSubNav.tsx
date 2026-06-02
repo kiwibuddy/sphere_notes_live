@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useStudentPathBuilder } from "@/hooks/useStudentHref";
 import { cn } from "@/lib/utils";
 
 const subTabs = [
@@ -13,6 +14,7 @@ const subTabs = [
 
 export function NotesSubNav() {
   const pathname = usePathname();
+  const studentPath = useStudentPathBuilder();
 
   return (
     <>
@@ -24,7 +26,7 @@ export function NotesSubNav() {
             return (
               <Link
                 key={href}
-                href={href}
+                href={studentPath(href)}
                 className={cn(
                   "flex-1 rounded-md py-2 text-center text-xs font-medium transition-all md:text-sm",
                   isActive
@@ -50,7 +52,7 @@ export function NotesSubNav() {
             return (
               <Link
                 key={href}
-                href={href}
+                href={studentPath(href)}
                 className={cn(
                   "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
                   isActive

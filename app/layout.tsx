@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { Instrument_Serif } from "next/font/google";
-import { MockSessionProvider } from "@/lib/session/context";
+import { SessionProvider } from "@/lib/session/SessionProvider";
 import "./globals.css";
 
 const instrumentSerif = Instrument_Serif({
@@ -35,7 +35,7 @@ export default function RootLayout({
       <body
         className={`${GeistSans.variable} ${instrumentSerif.variable} font-sans`}
       >
-        <MockSessionProvider>{children}</MockSessionProvider>
+        <SessionProvider>{children}</SessionProvider>
       </body>
     </html>
   );

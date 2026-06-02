@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY not configured", mock: true },
+      { error: "ANTHROPIC_API_KEY not configured" },
       { status: 503 }
     );
   }
@@ -16,6 +16,13 @@ export async function POST(request: Request) {
   const body = await request.json();
   const { text } = body as { text: string };
 
-  // LIVE: Implement Claude API call here
-  return NextResponse.json({ corrected: text, mock: false });
+  if (!text?.trim()) {
+    return NextResponse.json({ error: "text is required" }, { status: 400 });
+  }
+
+  // Not implemented yet — do not echo input as a fake correction
+  return NextResponse.json(
+    { error: "Subtitle correction API not implemented yet" },
+    { status: 501 }
+  );
 }

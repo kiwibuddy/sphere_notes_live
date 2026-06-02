@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "GOOGLE_TRANSLATE_API_KEY not configured", mock: true },
+      { error: "GOOGLE_TRANSLATE_API_KEY not configured" },
       { status: 503 }
     );
   }
@@ -19,10 +19,15 @@ export async function POST(request: Request) {
     targetLocale: string;
   };
 
-  // LIVE: Implement Google Translate API call
-  return NextResponse.json({
-    translated: text,
-    locale: targetLocale,
-    mock: false,
-  });
+  if (!text?.trim() || !targetLocale) {
+    return NextResponse.json(
+      { error: "text and targetLocale are required" },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.json(
+    { error: "Translation API not implemented yet" },
+    { status: 501 }
+  );
 }

@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/session/context";
+import {
+  isoToSessionDateDisplay,
+  parseSessionDateToIso,
+  todayIso,
+  todaySessionDate,
+} from "@/lib/dates/sessionDate";
 import { cn } from "@/lib/utils";
 import { Check, Pencil, X } from "lucide-react";
 
@@ -100,6 +106,61 @@ function EditableField({
   );
 }
 
+function SessionDateField({
+  label,
+  value,
+  onSave,
+  className,
+}: {
+  label: string;
+  value: string;
+  onSave: (value: string) => void;
+  className?: string;
+}) {
+  const inputId = useId();
+  const isoValue = parseSessionDateToIso(value) ?? todayIso();
+  const displayPreview = value.trim() || isoToSessionDateDisplay(isoValue);
+
+  const handleChange = (iso: string) => {
+    if (!iso) return;
+    onSave(isoToSessionDateDisplay(iso));
+  };
+
+  return (
+    <div className={className}>
+      <label
+        htmlFor={inputId}
+        className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-muted"
+      >
+        {label}
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          id={inputId}
+          type="date"
+          value={isoValue}
+          onChange={(e) => handleChange(e.target.value)}
+          className={cn(
+            "min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2",
+            "text-sm text-foreground outline-none ring-foreground/20 focus:ring-2",
+            "[color-scheme:light]"
+          )}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onSave(todaySessionDate())}
+          className="shrink-0"
+        >
+          Today
+        </Button>
+      </div>
+      <p className="mt-1.5 text-xs text-muted">{displayPreview}</p>
+    </div>
+  );
+}
+
 export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
   const { meta, getDayInfo, setEventTitle, setDayTopic, setDayDate } =
     useSession();
@@ -119,11 +180,10 @@ export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
         onSave={(topic) => setDayTopic(meta.currentDay, topic)}
         placeholder="e.g. Creation & Fall"
       />
-      <EditableField
+      <SessionDateField
         label="Date"
         value={day.date}
         onSave={(date) => setDayDate(meta.currentDay, date)}
-        placeholder="e.g. Monday 2 June"
         className="sm:col-span-2"
       />
     </div>

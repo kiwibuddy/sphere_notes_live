@@ -4,6 +4,20 @@ import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ObsSceneBar } from "@/components/presenter/ObsSceneBar";
+import dynamic from "next/dynamic";
+
+const PresenterJoinPanel = dynamic(
+  () =>
+    import("@/components/presenter/PresenterJoinPanel").then(
+      (m) => m.PresenterJoinPanel
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mb-6 h-48 animate-pulse rounded-xl bg-surface" />
+    ),
+  }
+);
 import { PresenterSettingsModal } from "@/components/presenter/PresenterSettingsModal";
 import { useSession } from "@/lib/session/context";
 import { cn } from "@/lib/utils";
@@ -41,6 +55,7 @@ export function PresenterDashboard() {
     displayMode,
     displayQuestion,
     setDisplay,
+    studentJoinUrl,
   } = useSession();
 
   const dayInfo = getDayInfo(meta.currentDay);
@@ -153,7 +168,7 @@ export function PresenterDashboard() {
                 </>
               )}
 
-              <Link href="/student">
+              <Link href={studentJoinUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm">
                   Student view
                 </Button>
@@ -175,6 +190,8 @@ export function PresenterDashboard() {
               </Button>
             </div>
           </header>
+
+          <PresenterJoinPanel />
 
           {/* Projector content — what /display shows before OBS SphereNotes scene */}
           <section className="mb-6 rounded-xl bg-surface p-4 shadow-card md:p-6">

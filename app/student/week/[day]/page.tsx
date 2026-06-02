@@ -2,21 +2,14 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { buildDayArchive } from "@/lib/mock/week";
-import { useSession } from "@/lib/session/context";
+import { useDayArchive } from "@/hooks/useDayArchive";
 import { WeekArchivePanel } from "@/components/week/WeekArchivePanel";
 import { ArrowLeft } from "lucide-react";
 
 export default function DayArchivePage() {
   const params = useParams();
   const day = Number(params.day);
-  const { meta, dayInfo, slides } = useSession();
-  const archive = buildDayArchive(
-    day,
-    meta.currentDay,
-    dayInfo,
-    day === meta.currentDay ? slides : undefined
-  );
+  const { archive, loading } = useDayArchive(day);
 
   if (Number.isNaN(day) || day < 1 || day > 4) {
     return (
@@ -37,7 +30,10 @@ export default function DayArchivePage() {
         </Link>
         <div>
           <p className="font-display text-lg text-foreground">{archive.label}</p>
-          <p className="text-xs text-muted">{archive.date} · Read-only</p>
+          <p className="text-xs text-muted">
+            {archive.date || "—"} · Read-only
+            {loading && " · Loading…"}
+          </p>
         </div>
       </div>
       <WeekArchivePanel archive={archive} />

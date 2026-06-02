@@ -1,6 +1,4 @@
-import type { SubtitleLine } from "@/types/session";
-import type { WordCloudEntry } from "@/types/session";
-import { mockWordcloud } from "@/lib/mock/wordcloud";
+import type { SubtitleLine, WordCloudEntry } from "@/types/session";
 
 const FILLERS = new Set([
   "the", "a", "an", "and", "is", "was", "that", "this", "it", "of", "to",
@@ -58,7 +56,6 @@ export function buildSpeechPool(subtitles: SubtitleLine[]): WordCloudEntry[] {
     });
   };
 
-  mockWordcloud.forEach((w) => add(w.word, w.category));
   subtitles.forEach((line) => {
     tokenize(line.textEn).forEach((token) => add(token));
   });
@@ -66,26 +63,14 @@ export function buildSpeechPool(subtitles: SubtitleLine[]): WordCloudEntry[] {
   return Array.from(map.values());
 }
 
-/** Seed cloud at go-live with a few words + some older-than-5min hits for demo toggle */
+/** Seed cloud at go-live from transcript vocabulary (empty until speech runs). */
 export function seedWordcloud(pool: WordCloudEntry[]): WordCloudEntry[] {
+  if (pool.length === 0) return [];
   const now = Date.now();
-  const seeds = pool.slice(0, 8);
-
-  return seeds.map((entry, i) => {
-    const occurrences: number[] = [];
-    const base = 2 + (i % 4);
-
-    for (let n = 0; n < base; n++) {
-      occurrences.push(now - n * 45_000);
-    }
-
-    // First two words get stale occurrences so "5 min" view drops them partly
-    if (i < 2) {
-      occurrences.push(now - 6 * 60_000, now - 7 * 60_000);
-    }
-
-    return { ...entry, occurrences };
-  });
+  return pool.slice(0, 12).map((entry) => ({
+    ...entry,
+    occurrences: [now],
+  }));
 }
 
 export function tickWordcloud(
@@ -127,12 +112,6 @@ export function tickWordcloudFromSpeech(
   return next;
 }
 
-export function resetWordcloudForDay(day: number): WordCloudEntry[] {
-  return mockWordcloud.map((w) => ({
-    word: w.word,
-    category: w.category,
-    occurrences: Array.from({ length: Math.max(1, w.count % 6) }, (_, i) =>
-      Date.now() - (day * 3600_000 + i * 120_000)
-    ),
-  }));
+export function resetWordcloudForDay(_day: number): WordCloudEntry[] {
+  return [];
 }
