@@ -3,7 +3,10 @@
 import { SendToMineButton } from "@/components/cards/SendToMineButton";
 import { captureWordCloudSnapshot } from "@/lib/wordcloud/capture";
 import { categoryColor } from "@/lib/wordcloud/layout";
-import { sizeWordCloud } from "@/lib/wordcloud/sizes";
+import {
+  sizeWordCloud,
+  wordCloudLimitForMode,
+} from "@/lib/wordcloud/sizes";
 import type { WordCloudMode, WordCloudWord } from "@/types/session";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,17 +19,25 @@ export interface WordCloudSendPayload {
 interface WordCloudCanvasProps {
   words: WordCloudWord[];
   mode?: WordCloudMode;
+  maxWords?: number;
   onSendToMine?: (payload: WordCloudSendPayload) => void;
 }
 
 export function WordCloudCanvas({
   words,
+  mode = "session",
+  maxWords,
   onSendToMine,
 }: WordCloudCanvasProps) {
   const [pulseWord, setPulseWord] = useState<string | null>(null);
   const prevCountsRef = useRef<Map<string, number>>(new Map());
 
-  const sizedWords = useMemo(() => sizeWordCloud(words, 50), [words]);
+  const limit = maxWords ?? wordCloudLimitForMode(mode);
+
+  const sizedWords = useMemo(
+    () => sizeWordCloud(words, limit),
+    [words, limit]
+  );
 
   const topWords = sizedWords
     .slice(0, 12)
@@ -35,7 +46,7 @@ export function WordCloudCanvas({
 
   const handleSend = () => {
     if (!onSendToMine) return;
-    const imageData = captureWordCloudSnapshot(words);
+    const imageData = captureWordCloudSnapshot(words, limit);
     onSendToMine({
       text: `Word cloud · ${topWords}`,
       imageData: imageData ?? undefined,

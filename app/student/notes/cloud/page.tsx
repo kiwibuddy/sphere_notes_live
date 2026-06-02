@@ -9,6 +9,7 @@ import {
   filterWordcloud,
   liveResetStorageKey,
 } from "@/lib/wordcloud/entries";
+import { wordCloudLimitForMode } from "@/lib/wordcloud/sizes";
 import type { WordCloudMode } from "@/types/session";
 import { cn } from "@/lib/utils";
 import { RotateCcw } from "lucide-react";
@@ -47,10 +48,14 @@ export default function CloudNotesPage() {
     [wordcloudEntries, mode, filterOptions]
   );
 
-  const wordCount = useMemo(
+  const limit = wordCloudLimitForMode(mode);
+
+  const totalInView = useMemo(
     () => entryCount(wordcloudEntries, mode, filterOptions),
     [wordcloudEntries, mode, filterOptions]
   );
+
+  const shownCount = Math.min(totalInView, limit);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -91,7 +96,10 @@ export default function CloudNotesPage() {
           )}
         </div>
         <span className="text-xs text-muted md:text-sm">
-          {wordCount} word{wordCount !== 1 ? "s" : ""}
+          {shownCount} word{shownCount !== 1 ? "s" : ""}
+          {totalInView > limit && (
+            <span className="text-muted/80"> · top {limit}</span>
+          )}
           {meta.status === "live" && mode === "live" && (
             <span className="ml-2 text-live-active">· growing live</span>
           )}
@@ -110,6 +118,7 @@ export default function CloudNotesPage() {
           <WordCloudCanvas
             words={filtered}
             mode={mode}
+            maxWords={limit}
             onSendToMine={({ text, imageData }) =>
               sendToMine(
                 text,

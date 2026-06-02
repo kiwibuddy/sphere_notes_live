@@ -4,6 +4,7 @@ import { drawWordCloud, layoutWordCloud } from "./layout";
 /** Render an offscreen snapshot for Mine note clippings */
 export function captureWordCloudSnapshot(
   words: WordCloudWord[],
+  maxWords = 50,
   width = 560,
   height = 240
 ): string | null {
@@ -19,7 +20,7 @@ export function captureWordCloudSnapshot(
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const placed = layoutWordCloud(words, width, height, ctx);
+  const placed = layoutWordCloud(words, width, height, ctx, maxWords);
   drawWordCloud(ctx, placed, null, 0, width, height, {
     background: "#FFFFFF",
   });

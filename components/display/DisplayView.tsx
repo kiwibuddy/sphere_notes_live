@@ -43,7 +43,7 @@ export function DisplayView() {
           {meta.title}
         </h2>
         <div className="min-h-[60vh] flex-1">
-          <WordCloudCanvas words={wordcloud} />
+          <WordCloudCanvas words={wordcloud} mode="session" />
         </div>
       </div>
     );

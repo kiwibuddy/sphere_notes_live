@@ -41,11 +41,12 @@ export function layoutWordCloud(
   words: WordCloudWord[],
   width: number,
   height: number,
-  ctx: CanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D,
+  maxWords = 50
 ): PlacedWord[] {
   if (width <= 0 || height <= 0 || words.length === 0) return [];
 
-  const sized = sizeWordCloud(words, 40);
+  const sized = sizeWordCloud(words, maxWords);
   const placed: PlacedWord[] = [];
   const margin = 10;
   let x = margin;

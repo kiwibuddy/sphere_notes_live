@@ -1,4 +1,12 @@
 import type { WordCloudWord } from "@/types/session";
+import type { WordCloudMode } from "@/types/session";
+
+export const WORD_CLOUD_LIMIT_LIVE = 50;
+export const WORD_CLOUD_LIMIT_SESSION = 100;
+
+export function wordCloudLimitForMode(mode: WordCloudMode): number {
+  return mode === "live" ? WORD_CLOUD_LIMIT_LIVE : WORD_CLOUD_LIMIT_SESSION;
+}
 
 export interface SizedWord extends WordCloudWord {
   fontSizePx: number;
@@ -18,7 +26,8 @@ export function sizeWordCloud(
 
   const maxCount = Math.max(...sorted.map((w) => w.count), 1);
   const minPx = 12;
-  const maxPx = n > 45 ? 38 : n > 25 ? 48 : n > 12 ? 56 : 72;
+  const maxPx =
+    maxWords > 80 ? 36 : n > 45 ? 38 : n > 25 ? 48 : n > 12 ? 56 : 72;
 
   return sorted.map((w, rank) => {
     const countPart =
