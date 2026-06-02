@@ -23,6 +23,7 @@ import {
   parseJoinDay,
 } from "@/lib/session/join-url";
 import { placeholderSlides } from "@/lib/slides/placeholder";
+import { SLIDE_SYNC_DAY } from "@/lib/slides/constants";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureSupabaseAuth } from "@/lib/session/ensure-auth";
 import { withTimeout, TimeoutError } from "@/lib/session/with-timeout";
@@ -79,17 +80,16 @@ function saveClippings(clippings: Clipping[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(clippings));
 }
 
-async function fetchSlidesForDay(
-  day: number,
+async function fetchSlidesDeck(
   eventTitle: string,
   current: number
 ): Promise<SlideInfo> {
   try {
-    const res = await fetch(`/api/slides?day=${day}`);
+    const res = await fetch("/api/slides");
     if (!res.ok) throw new Error("Failed to load slides");
     const data = (await res.json()) as { total: number; images: string[] };
     if (data.total === 0) {
-      return placeholderSlides(day, eventTitle);
+      return placeholderSlides(1, eventTitle);
     }
     const total = data.total;
     const safeCurrent = Math.max(1, Math.min(current, total));
@@ -99,7 +99,7 @@ async function fetchSlidesForDay(
       images: data.images,
     };
   } catch {
-    return placeholderSlides(day, eventTitle);
+    return placeholderSlides(1, eventTitle);
   }
 }
 
@@ -189,13 +189,13 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       .from("day_slides")
       .select("current")
       .eq("event_id", eventId)
-      .eq("day", activeDay)
+      .eq("day", SLIDE_SYNC_DAY)
       .maybeSingle();
     const current = slideRow?.current ?? 1;
-    const next = await fetchSlidesForDay(activeDay, meta.title, current);
+    const next = await fetchSlidesDeck(meta.title, current);
     setSlides(next);
     setSlidesLoading(false);
-  }, [activeDay, meta.title, eventId]);
+  }, [meta.title, eventId]);
 
   const setSlideCurrent = useCallback(
     async (current: number) => {
@@ -207,9 +207,9 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
         .from("day_slides")
         .update({ current: safe, total, updated_at: new Date().toISOString() })
         .eq("event_id", eventId)
-        .eq("day", activeDay);
+        .eq("day", SLIDE_SYNC_DAY);
     },
-    [slides.total, eventId, activeDay]
+    [slides.total, eventId]
   );
 
   useEffect(() => {
@@ -289,7 +289,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
               .from("day_slides")
               .select("current,total")
               .eq("event_id", eventId)
-              .eq("day", fetchDay)
+              .eq("day", SLIDE_SYNC_DAY)
               .maybeSingle(),
             supabase
               .from("day_reactions")
@@ -332,7 +332,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
           }));
         }
 
-        void fetchSlidesForDay(fetchDay, eventTitle, slideCurrent).then(
+        void fetchSlidesDeck(eventTitle, slideCurrent).then(
           (slideInfo) => {
             if (cancelled) return;
             if (slideRow?.total) {
@@ -422,19 +422,6 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     };
   }, [eventId, urlDayRaw, isStudent, markReady, reloadToken]);
 
-  const prevSlideDayRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!ready) return;
-    if (prevSlideDayRef.current === null) {
-      prevSlideDayRef.current = activeDay;
-      return;
-    }
-    if (prevSlideDayRef.current === activeDay) return;
-    prevSlideDayRef.current = activeDay;
-    void refreshSlides();
-  }, [activeDay, ready, refreshSlides]);
-
   useEffect(() => {
     saveClippings(clippings);
   }, [clippings]);
@@ -520,7 +507,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
         },
         async (payload) => {
           const row = payload.new as { day: number; current: number; total: number };
-          if (row.day !== activeDay) return;
+          if (row.day !== SLIDE_SYNC_DAY) return;
           setSlides((prev) => ({
             ...prev,
             current: row.current,

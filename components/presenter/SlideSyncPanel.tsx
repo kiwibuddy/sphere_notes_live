@@ -6,14 +6,13 @@ import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 
 export function SlideSyncPanel({ embedded = false }: { embedded?: boolean }) {
   const {
-    meta,
     slides,
     slidesLoading,
     refreshSlides,
     setSlideCurrent,
   } = useSession();
 
-  const folder = `public/slides/day-${meta.currentDay}/`;
+  const folder = "public/slides/";
   const hasPngs = slides.total > 0 && !slides.images[0]?.startsWith("data:");
 
   const body = (
@@ -47,8 +46,8 @@ export function SlideSyncPanel({ embedded = false }: { embedded?: boolean }) {
 
         <p className="text-xs text-muted">
           {hasPngs
-            ? `${slides.total} PNG${slides.total === 1 ? "" : "s"} loaded for day ${meta.currentDay}`
-            : "No PNGs yet — using placeholder until you add files"}
+            ? `${slides.total} PNG${slides.total === 1 ? "" : "s"} loaded (full deck)`
+            : "No PNGs yet — export your Keynote deck into public/slides/"}
         </p>
       </div>
 
@@ -72,12 +71,13 @@ export function SlideSyncPanel({ embedded = false }: { embedded?: boolean }) {
           <div>
             <h3 className="text-sm font-semibold text-foreground">Slides</h3>
             <p className="mt-1 text-xs leading-relaxed text-muted">
-              Export Keynote as PNG into{" "}
+              Export your full Keynote deck as PNG into{" "}
               <code className="rounded bg-background px-1 py-0.5 text-[11px]">
                 {folder}
               </code>{" "}
-              (any .png — Keynote names like Presentation.001.png work). Tap
-              refresh after adding files.
+              (any .png names — slide number follows Keynote order). Tap refresh
+              after adding files. Jump around in Keynote freely; phones follow
+              slide number, not teaching day.
             </p>
           </div>
           <Button
@@ -105,12 +105,13 @@ export function SlideSyncPanel({ embedded = false }: { embedded?: boolean }) {
         <div>
           <h2 className="text-sm font-semibold text-foreground">Slides</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
-            Export Keynote as PNG into{" "}
+            Export your full Keynote deck as PNG into{" "}
             <code className="rounded bg-background px-1 py-0.5 text-[11px]">
               {folder}
             </code>{" "}
-            (any .png — Keynote names like Presentation.001.png work). Tap
-            refresh after adding files.
+            (any .png names — slide number follows Keynote order). Tap refresh
+            after adding files. Jump around in Keynote freely; phones follow
+            slide number, not teaching day.
           </p>
         </div>
         <Button
