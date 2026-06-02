@@ -19,6 +19,7 @@ const PresenterJoinPanel = dynamic(
   }
 );
 import { PresenterSettingsModal } from "@/components/presenter/PresenterSettingsModal";
+import { LiveMessagePanel } from "@/components/presenter/LiveMessagePanel";
 import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
 import { formatSessionHeader } from "@/lib/session/day-label";
 import { useSession } from "@/lib/session/context";
@@ -201,6 +202,8 @@ export function PresenterDashboard() {
           </header>
 
           <PresenterJoinPanel />
+
+          <LiveMessagePanel />
 
           {/* Projector content — what /display shows before OBS SphereNotes scene */}
           <section className="mb-6 rounded-xl bg-surface p-4 shadow-card md:p-6">

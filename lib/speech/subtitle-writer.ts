@@ -32,6 +32,9 @@ export function applySpeechResult(
   lines = lines.map((l) => ({ ...l, translations: { ...l.translations } }));
 
   if (!currentLineId) {
+    lines = lines.map((l) =>
+      l.isCurrent ? { ...l, isCurrent: false } : l
+    );
     currentLineId = crypto.randomUUID();
     lines.push({
       id: currentLineId,

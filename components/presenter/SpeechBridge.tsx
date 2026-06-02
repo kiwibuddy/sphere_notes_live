@@ -135,6 +135,34 @@ export function SpeechBridge() {
     void loadSubtitlesFromDb();
   }, [sessionReady, authOk, loadSubtitlesFromDb]);
 
+  /** Sync when the iPad pushes a manual live message (or other external edit). */
+  useEffect(() => {
+    if (!sessionReady || !authOk) return;
+
+    const supabase = getSupabaseBrowserClient();
+    const channel = supabase
+      .channel(`speech-subtitles-${joinEventId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "day_subtitles",
+          filter: `event_id=eq.${joinEventId}`,
+        },
+        (payload) => {
+          const row = payload.new as { day: number };
+          if (row.day !== LIVE_SYNC_DAY) return;
+          void loadSubtitlesFromDb();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [sessionReady, authOk, joinEventId, loadSubtitlesFromDb]);
+
   /** Re-load after iPad Go Live clears `day_subtitles` in Supabase. */
   useEffect(() => {
     if (!sessionReady || !authOk) return;

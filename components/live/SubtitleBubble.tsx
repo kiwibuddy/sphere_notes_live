@@ -1,6 +1,7 @@
 "use client";
 
 import { SendToMineButton } from "@/components/cards/SendToMineButton";
+import { renderSubtitleText } from "@/components/live/subtitle-text";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import type { SubtitleLine } from "@/types/session";
@@ -41,6 +42,7 @@ export function SubtitleBubble({
   onSendToMine,
 }: SubtitleBubbleProps) {
   const isLive = !!line.isCurrent;
+  const isManual = !!line.isManual;
 
   return (
     <motion.div
@@ -87,7 +89,7 @@ export function SubtitleBubble({
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-live-active" />
               </span>
               <span className="text-[10px] font-semibold uppercase tracking-widest text-tab-live">
-                Now speaking
+                {isManual ? "Shared" : "Now speaking"}
               </span>
             </div>
           )}
@@ -103,10 +105,10 @@ export function SubtitleBubble({
             )}
             style={{ fontSize: `${fontSize}px` }}
           >
-            {text}
+            {renderSubtitleText(text)}
           </motion.p>
 
-          {isLive && <TypingIndicator />}
+          {isLive && !isManual && <TypingIndicator />}
 
           {!readOnly && onSendToMine && (
             <div className="mt-1 flex justify-end">

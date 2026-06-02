@@ -44,6 +44,8 @@ import {
   mapWordcloudJson,
 } from "@/lib/session/supabase-mappers";
 import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
+import { appendManualSubtitle } from "@/lib/speech/append-manual-subtitle";
+import { createSubtitleWriterState } from "@/lib/speech/subtitle-writer";
 import { resetWordcloudForDay } from "@/lib/wordcloud/simulation";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type { Json } from "@/lib/supabase/database.types";
@@ -994,6 +996,51 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [eventId, activeDay, displayMode, setDisplay]);
 
+  const sendLiveMessage = useCallback(
+    async (text: string): Promise<boolean> => {
+      const trimmed = text.trim();
+      if (!trimmed) return false;
+
+      const supabase = getSupabaseBrowserClient();
+      const { data, error } = await supabase
+        .from("day_subtitles")
+        .select("lines, full_transcript")
+        .eq("event_id", eventId)
+        .eq("day", LIVE_SYNC_DAY)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[session] send live message fetch failed", error.message);
+        return false;
+      }
+
+      const state = createSubtitleWriterState(
+        mapSubtitleLines(data?.lines ?? []),
+        data?.full_transcript ?? ""
+      );
+      const next = appendManualSubtitle(state, trimmed);
+
+      const { error: updateError } = await supabase
+        .from("day_subtitles")
+        .update({
+          lines: next.lines as unknown as Json,
+          full_transcript: next.fullTranscript,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("event_id", eventId)
+        .eq("day", LIVE_SYNC_DAY);
+
+      if (updateError) {
+        console.error("[session] send live message update failed", updateError.message);
+        return false;
+      }
+
+      setSubtitles(mapSubtitleLines(next.lines));
+      return true;
+    },
+    [eventId]
+  );
+
   const addClipping = useCallback(
     (clipping: Omit<Clipping, "id" | "createdAt">) => {
       setClippings((prev) => [
@@ -1037,6 +1084,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     voteQuestion,
     submitQuestion,
     resetQuestions,
+    sendLiveMessage,
     addReaction,
     setDisplay,
     addClipping,

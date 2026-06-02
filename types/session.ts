@@ -67,6 +67,8 @@ export interface SubtitleLine {
   rawTextEn?: string;
   translations: Record<string, string>;
   isCurrent?: boolean;
+  /** Typed link or note from the presenter iPad — not from speech. */
+  isManual?: boolean;
 }
 
 export interface Question {
@@ -176,6 +178,8 @@ export interface SessionContextValue {
   submitQuestion: (text: string) => void;
   /** Presenter: delete all questions for the current session day. */
   resetQuestions: () => Promise<void>;
+  /** Presenter: push a typed link or message to the Live tab. */
+  sendLiveMessage: (text: string) => Promise<boolean>;
   addReaction: (key: keyof Reactions) => void;
   setDisplay: (mode: DisplayMode, payload?: DisplayPayload) => void;
   addClipping: (clipping: Omit<Clipping, "id" | "createdAt">) => void;
