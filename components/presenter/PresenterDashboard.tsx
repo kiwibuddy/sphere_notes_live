@@ -212,8 +212,8 @@ export function PresenterDashboard() {
                 </h2>
                 <p className="mt-1 text-xs text-muted">
                   Tap <strong>Show</strong> on any question to put it on the
-                  projector. Use &ldquo;Top question&rdquo; below for the most
-                  upvoted one.
+                  projector. Use &ldquo;Top question&rdquo; in Show on projector
+                  for the most upvoted one.
                 </p>
               </div>
               {(meta.status === "live" || meta.status === "paused") && (

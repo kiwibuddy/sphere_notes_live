@@ -44,6 +44,10 @@ import {
   mapWordcloudJson,
 } from "@/lib/session/supabase-mappers";
 import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
+import {
+  clearLiveBucketInDb,
+  resetLiveSessionChrome,
+} from "@/lib/session/clear-live-bucket";
 import { pushLiveMessageToSubtitles } from "@/lib/speech/push-live-message";
 import { resetWordcloudForDay } from "@/lib/wordcloud/simulation";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
@@ -762,31 +766,11 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
 
   const goLive = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    await supabase
-      .from("day_subtitles")
-      .update({
-        lines: [],
-        full_transcript: "",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("event_id", eventId)
-      .eq("day", LIVE_SYNC_DAY);
+    await clearLiveBucketInDb(supabase, eventId, LIVE_SYNC_DAY);
     setSubtitles([]);
     setWordcloudEntries(resetWordcloudForDay(LIVE_SYNC_DAY));
-    await supabase
-      .from("day_wordcloud")
-      .update({
-        words: {},
-        updated_at: new Date().toISOString(),
-      })
-      .eq("event_id", eventId)
-      .eq("day", LIVE_SYNC_DAY);
-    await supabase
-      .from("note_cards")
-      .delete()
-      .eq("event_id", eventId)
-      .eq("day", LIVE_SYNC_DAY);
     setNotes([]);
+    setSessionMap([]);
     await setStatus("live");
   }, [setStatus, eventId]);
 
@@ -801,6 +785,13 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
   const endDay = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
     const info = getSessionInfo();
+
+    const { data: subtitleRow } = await supabase
+      .from("day_subtitles")
+      .select("full_transcript")
+      .eq("event_id", eventId)
+      .eq("day", LIVE_SYNC_DAY)
+      .maybeSingle();
 
     const { data: archiveRows } = await supabase
       .from("day_archives")
@@ -817,6 +808,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
         label: info.topic.trim() || "Session",
         date: info.date ?? "",
         subtitles,
+        fullTranscript: subtitleRow?.full_transcript ?? "",
         questions,
         notes,
         slides: {
@@ -829,6 +821,9 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       } as unknown as Json,
     });
 
+    await clearLiveBucketInDb(supabase, eventId, LIVE_SYNC_DAY);
+    await resetLiveSessionChrome(supabase, eventId, LIVE_SYNC_DAY);
+
     await supabase
       .from("events")
       .update({
@@ -837,6 +832,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", eventId);
+
     setMeta((m) => ({
       ...m,
       status: "waiting",
@@ -846,6 +842,13 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     setSubtitles([]);
     setNotes([]);
     setSessionMap([]);
+    setQuestions([]);
+    votedIdsRef.current.clear();
+    setReactions({ fire: 0, clap: 0, think: 0, question: 0 });
+    setDisplayModeState("idle");
+    setDisplayQuote("");
+    setDisplayQuestion(null);
+    setSlides((prev) => ({ ...prev, current: 1 }));
   }, [
     eventId,
     getSessionInfo,

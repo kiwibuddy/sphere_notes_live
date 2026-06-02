@@ -4,17 +4,23 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useDayArchive } from "@/hooks/useDayArchive";
 import { WeekArchivePanel } from "@/components/week/WeekArchivePanel";
+import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { ArrowLeft } from "lucide-react";
 
 export default function DayArchivePage() {
   const params = useParams();
-  const day = Number(params.day);
-  const { archive, loading } = useDayArchive(day);
+  const raw = params.day as string;
+  const isLiveRoute = raw === "live";
+  const day = isLiveRoute ? LIVE_SYNC_DAY : Number(raw);
+  const { archive, loading } = useDayArchive(
+    day,
+    isLiveRoute ? "live" : "stored"
+  );
 
-  if (Number.isNaN(day) || day < 1 || day > 4) {
+  if (!isLiveRoute && (Number.isNaN(day) || day < 1)) {
     return (
       <div className="p-8 text-center text-muted">
-        Day not found.{" "}
+        Session not found.{" "}
         <Link href="/student/week" className="text-tab-live underline">
           Back to Week
         </Link>
@@ -31,7 +37,8 @@ export default function DayArchivePage() {
         <div>
           <p className="font-display text-lg text-foreground">{archive.label}</p>
           <p className="text-xs text-muted">
-            {archive.date || "—"} · Read-only
+            {archive.date || "—"} ·{" "}
+            {isLiveRoute ? "Current session" : "Read-only"}
             {loading && " · Loading…"}
           </p>
         </div>

@@ -4,6 +4,7 @@ import { SlideCaptionLine } from "@/components/slides/SlideCaptionLine";
 import { SlideFullscreenView } from "@/components/slides/SlideFullscreenView";
 import { LanguagePicker } from "@/components/live/LanguagePicker";
 import { useLocale } from "@/hooks/useMineNotes";
+import { useSlideCaptionDismiss } from "@/hooks/useSlideCaptionDismiss";
 import { useSubtitleTranslations } from "@/hooks/useSubtitleTranslations";
 import { isLandscape, isMobilePhone } from "@/lib/device/ios";
 import { useSession } from "@/lib/session/context";
@@ -41,6 +42,10 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
       ? currentLine.textEn
       : currentLine.translations[locale] ?? currentLine.textEn
     : null;
+
+  const captionKey =
+    currentLine && subtitleText ? `${currentLine.id}:${subtitleText}` : null;
+  const captionVisible = useSlideCaptionDismiss(captionKey, subtitlesOn);
 
   const openFullscreen = useCallback(() => {
     setFullscreen(true);
@@ -130,7 +135,7 @@ export function SlideViewer({ readOnly }: SlideViewerProps) {
           </button>
         </div>
 
-        {subtitlesOn && (
+        {subtitlesOn && (!subtitleText || captionVisible) && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background from-40% via-background/80 to-transparent px-4 pb-3 pt-6">
             <div className="pointer-events-auto mx-auto max-w-3xl text-center">
               {subtitleText ? (

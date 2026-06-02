@@ -13,16 +13,21 @@ import type { DayArchive } from "@/types/session";
 const EVENT_ID =
   process.env.NEXT_PUBLIC_EVENT_ID ?? "biblical-worldview-2026";
 
-export function useDayArchive(day: number): {
+export type DayArchiveSource = "live" | "stored";
+
+export function useDayArchive(
+  day: number,
+  source: DayArchiveSource = "stored"
+): {
   archive: DayArchive;
   loading: boolean;
   isLiveDay: boolean;
 } {
   const session = useSession();
-  const { meta, dayInfo, activeDay, subtitles, questions, notes, slides, wordcloudEntries, sessionMap } =
+  const { meta, dayInfo, subtitles, questions, notes, slides, wordcloudEntries, sessionMap } =
     session;
 
-  const isLiveDay = day === activeDay;
+  const isLiveDay = source === "live";
   const [stored, setStored] = useState<DayArchive | null>(null);
   const [loading, setLoading] = useState(!isLiveDay);
 

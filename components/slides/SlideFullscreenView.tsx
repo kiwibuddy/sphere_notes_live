@@ -2,6 +2,7 @@
 
 import { SlideCaptionLine } from "@/components/slides/SlideCaptionLine";
 import { LanguagePicker } from "@/components/live/LanguagePicker";
+import { useSlideCaptionDismiss } from "@/hooks/useSlideCaptionDismiss";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
 import { useLocale } from "@/hooks/useMineNotes";
 import { isIOS, supportsElementFullscreen } from "@/lib/device/ios";
@@ -66,6 +67,7 @@ export function SlideFullscreenView({
   const { locale, setLocale } = useLocale();
   const [subtitlesOn, setSubtitlesOn] = useState(false);
   const [chromeHidden, setChromeHidden] = useState(false);
+  const [nativeFs, setNativeFs] = useState(false);
 
   onCloseRef.current = onClose;
 
@@ -81,6 +83,10 @@ export function SlideFullscreenView({
       ? currentLine.textEn
       : currentLine.translations[locale] ?? currentLine.textEn
     : null;
+
+  const captionKey =
+    currentLine && subtitleText ? `${currentLine.id}:${subtitleText}` : null;
+  const captionVisible = useSlideCaptionDismiss(captionKey, subtitlesOn);
 
   const handleClose = useCallback(async () => {
     if (nativeFsActiveRef.current && getFullscreenElement()) {
@@ -110,6 +116,7 @@ export function SlideFullscreenView({
       void requestElementFullscreen(el)
         .then(() => {
           nativeFsActiveRef.current = !!getFullscreenElement();
+          setNativeFs(nativeFsActiveRef.current);
         })
         .catch(() => {
           nativeFsActiveRef.current = false;
@@ -117,6 +124,8 @@ export function SlideFullscreenView({
     }
 
     const onFullscreenChange = () => {
+      setNativeFs(!!getFullscreenElement());
+
       if (!nativeFsActiveRef.current) return;
 
       if (intentionalExitRef.current) {
@@ -159,48 +168,69 @@ export function SlideFullscreenView({
     setChromeHidden(true);
   }, []);
 
-  const controlsHeight = subtitlesOn ? 88 : 48;
-  const slideHeight = Math.max(viewport.height - controlsHeight, 120);
+  const viewHeight = nativeFs
+    ? typeof window !== "undefined"
+      ? window.innerHeight
+      : viewport.height
+    : viewport.height;
+  const showCaptionBar = subtitlesOn && !!subtitleText && captionVisible;
+  const controlsHeight = showCaptionBar ? 88 : 48;
+  const slideHeight = Math.max(viewHeight - controlsHeight, 120);
+
+  const slideWidth = nativeFs
+    ? typeof window !== "undefined"
+      ? window.innerWidth
+      : viewport.width
+    : viewport.width;
 
   return (
     <div
       ref={containerRef}
-      className="fixed z-[9999] flex flex-col overflow-hidden bg-[#F7F5F2]"
-      style={{
-        top: viewport.offsetTop,
-        left: viewport.offsetLeft,
-        width: viewport.width,
-        height: viewport.height,
-      }}
+      className={cn(
+        "fixed z-[9999] flex flex-col overflow-hidden bg-[#F7F5F2]",
+        nativeFs && "inset-0 h-full w-full"
+      )}
+      style={
+        nativeFs
+          ? undefined
+          : {
+              top: viewport.offsetTop,
+              left: viewport.offsetLeft,
+              width: viewport.width,
+              height: viewport.height,
+            }
+      }
       role="dialog"
       aria-modal="true"
       aria-label="Slide fullscreen view"
     >
-      <button
-        type="button"
-        className="relative flex min-h-0 flex-1 flex-col border-0 bg-transparent p-0"
-        onClick={nudgeSafariChrome}
-        aria-label="Show slide"
-      >
-        <div className="flex min-h-0 flex-1 items-center justify-center px-1">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={slideSrc}
-            alt="Current slide"
-            className="h-full w-full object-contain"
-            style={{
-              maxHeight: slideHeight,
-              maxWidth: viewport.width,
-            }}
-          />
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <button
+          type="button"
+          className="relative flex min-h-0 w-full flex-1 border-0 bg-transparent p-0"
+          onClick={nudgeSafariChrome}
+          aria-label="Show slide"
+        >
+          <div className="flex min-h-0 flex-1 items-center justify-center px-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slideSrc}
+              alt="Current slide"
+              className="h-full w-full object-contain"
+              style={{
+                maxHeight: slideHeight,
+                maxWidth: slideWidth,
+              }}
+            />
+          </div>
+        </button>
 
-        {subtitlesOn && subtitleText && (
-          <div className="shrink-0 px-3 pb-2 pt-1">
-            <SlideCaptionLine text={subtitleText} />
+        {showCaptionBar && (
+          <div className="shrink-0 w-full px-3 pb-2 pt-1 text-center">
+            <SlideCaptionLine text={subtitleText!} />
           </div>
         )}
-      </button>
+      </div>
 
       <div
         className={cn(
