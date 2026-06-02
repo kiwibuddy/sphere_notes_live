@@ -24,7 +24,7 @@ const CONCEPT_HINTS = new Set([
   "cosmos", "discipleship", "creation", "mission",
 ]);
 
-function categorize(word: string): WordCloudEntry["category"] {
+export function categorizeWord(word: string): WordCloudEntry["category"] {
   const lower = word.toLowerCase();
   if (NAME_HINTS.has(lower)) return "names";
   if (THEOLOGY_HINTS.has(lower)) return "theology";
@@ -32,7 +32,7 @@ function categorize(word: string): WordCloudEntry["category"] {
   return "general";
 }
 
-function tokenize(text: string): string[] {
+export function tokenizeSpeech(text: string): string[] {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9'\s-]/g, " ")
@@ -51,13 +51,13 @@ export function buildSpeechPool(subtitles: SubtitleLine[]): WordCloudEntry[] {
     if (existing) return;
     map.set(word, {
       word,
-      category: category ?? categorize(raw),
+      category: category ?? categorizeWord(raw),
       occurrences: [],
     });
   };
 
   subtitles.forEach((line) => {
-    tokenize(line.textEn).forEach((token) => add(token));
+    tokenizeSpeech(line.textEn).forEach((token) => add(token));
   });
 
   return Array.from(map.values());

@@ -752,6 +752,14 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       .eq("day", LIVE_SYNC_DAY);
     setSubtitles([]);
     setWordcloudEntries(resetWordcloudForDay(LIVE_SYNC_DAY));
+    await supabase
+      .from("day_wordcloud")
+      .update({
+        words: {},
+        updated_at: new Date().toISOString(),
+      })
+      .eq("event_id", eventId)
+      .eq("day", LIVE_SYNC_DAY);
     await setStatus("live");
   }, [setStatus, eventId]);
 
