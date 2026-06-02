@@ -11,6 +11,7 @@ import type {
   WordCloudWord,
 } from "@/types/session";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
+import { coalesceSubtitleLines } from "@/lib/speech/subtitle-writer";
 
 export function getWeekDayList(
   meta: SessionMeta,
@@ -47,7 +48,7 @@ export function buildLiveDayArchive(
     label: info?.topic ?? `Day ${day}`,
     date: info?.date ?? "",
     status: getDayStatus(day, meta.currentDay),
-    subtitles: live.subtitles,
+    subtitles: coalesceSubtitleLines(live.subtitles),
     questions: live.questions,
     notes: live.notes,
     slides: live.slides,
@@ -81,7 +82,9 @@ export function parseArchiveSnapshot(
     label: (s.label as string) ?? info?.topic ?? `Day ${day}`,
     date: (s.date as string) ?? info?.date ?? "",
     status: getDayStatus(day, meta.currentDay),
-    subtitles: Array.isArray(s.subtitles) ? (s.subtitles as SubtitleLine[]) : [],
+    subtitles: Array.isArray(s.subtitles)
+      ? coalesceSubtitleLines(s.subtitles as SubtitleLine[])
+      : [],
     questions: Array.isArray(s.questions) ? (s.questions as Question[]) : [],
     notes: Array.isArray(s.notes) ? (s.notes as NoteCard[]) : [],
     slides: (s.slides as SlideInfo) ?? {

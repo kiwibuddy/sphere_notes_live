@@ -11,40 +11,43 @@ export default function AutoNotesPage() {
   const sendToMine = useSendToMine();
   const isLive = isTabLiveActive("notes");
   const showContent = isLive || meta.status === "paused";
+  const displayedNotes = [...notes].reverse();
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <StudentContent width="wide" className="relative">
+      <StudentContent width="wide" className="relative" scroll={false}>
         <WaitingOverlay
           show={!showContent}
           message="AI notes will generate when the session goes live."
         />
-        {showContent && notes.length === 0 && (
-          <p className="text-center text-sm text-muted">
-            AI notes appear here after about a minute of teaching. Keep the Mac{" "}
-            <strong>speech bridge</strong> open with the mic enabled.
-          </p>
-        )}
-        {showContent && notes.length > 0 && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {notes.map((card, i) => (
-              <div
-                key={card.id}
-                className={
-                  card.type === "quote" || card.type === "section"
-                    ? "lg:col-span-2"
-                    : undefined
-                }
-              >
-                <NoteCardRenderer
-                  card={card}
-                  index={i}
-                  onSendToMine={(text) => sendToMine(text, "auto", "AI Notes")}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {showContent && notes.length === 0 && (
+            <p className="text-center text-sm text-muted">
+              AI notes appear here after about a minute of teaching. Keep the Mac{" "}
+              <strong>speech bridge</strong> open with the mic enabled.
+            </p>
+          )}
+          {showContent && displayedNotes.length > 0 && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {displayedNotes.map((card, i) => (
+                <div
+                  key={card.id}
+                  className={
+                    card.type === "quote" || card.type === "section"
+                      ? "lg:col-span-2"
+                      : undefined
+                  }
+                >
+                  <NoteCardRenderer
+                    card={card}
+                    index={i}
+                    onSendToMine={(text) => sendToMine(text, "auto", "AI Notes")}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </StudentContent>
     </div>
   );

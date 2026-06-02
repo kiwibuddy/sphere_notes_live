@@ -693,6 +693,38 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [ready, refetchSubtitles]);
 
+  /** One-time server repair of duplicate cumulative subtitle rows in Supabase. */
+  useEffect(() => {
+    if (!ready) return;
+
+    const storageKey = `sn-subtitle-repair-${eventId}`;
+    if (typeof window !== "undefined" && sessionStorage.getItem(storageKey)) {
+      return;
+    }
+
+    void fetch("/api/presenter/repair-subtitles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId }),
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          changed?: boolean;
+          lines?: unknown;
+        };
+        if (data.lines) {
+          setSubtitles(mapSubtitleLines(data.lines));
+        }
+        if (data.changed && typeof window !== "undefined") {
+          sessionStorage.setItem(storageKey, "1");
+        }
+      })
+      .catch(() => {
+        /* display coalesce still applies via mapSubtitleLines */
+      });
+  }, [ready, eventId]);
+
   const setEventTitle = useCallback(
     async (title: string) => {
       const trimmed = title.trim();

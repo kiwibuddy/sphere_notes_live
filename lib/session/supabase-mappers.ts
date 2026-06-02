@@ -1,4 +1,5 @@
 import { WORD_CLOUD_UI_ENABLED } from "@/lib/features";
+import { coalesceSubtitleLines } from "@/lib/speech/subtitle-writer";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type {
   DayInfo,
@@ -79,9 +80,14 @@ export function mapReactionsRow(row: {
   };
 }
 
-export function mapSubtitleLines(lines: unknown): SubtitleLine[] {
+export function parseSubtitleLines(lines: unknown): SubtitleLine[] {
   if (!Array.isArray(lines)) return [];
   return lines.filter(isSubtitleLine);
+}
+
+/** Merge cumulative duplicate bubbles for display. */
+export function mapSubtitleLines(lines: unknown): SubtitleLine[] {
+  return coalesceSubtitleLines(parseSubtitleLines(lines));
 }
 
 function isSubtitleLine(v: unknown): v is SubtitleLine {

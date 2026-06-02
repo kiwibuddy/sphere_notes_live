@@ -23,9 +23,12 @@ import { WordcloudPusher } from "@/lib/wordcloud/wordcloud-pusher";
 import {
   applySpeechResult,
   createSubtitleWriterState,
+  finalizeSubtitleSegment,
   MAX_SUBTITLE_BUBBLE_CHARS,
   type SubtitleWriterState,
 } from "@/lib/speech/subtitle-writer";
+import { startNoteExtraction } from "@/lib/notes/extract-notes";
+import { repairSubtitlesInDb } from "@/lib/speech/repair-subtitles";
 import type { SessionStatus } from "@/types/session";
 import { cn } from "@/lib/utils";
 import { Mic, MicOff, Radio } from "lucide-react";
@@ -46,7 +49,7 @@ function hasNewManualLine(
 }
 
 /** End a bubble after a short pause when Chrome has not marked the phrase final. */
-const PAUSE_BUBBLE_MS = 1200;
+const PAUSE_BUBBLE_MS = 2000;
 
 function statusLabel(status: SessionStatus): string {
   switch (status) {
@@ -75,6 +78,8 @@ export function SpeechBridge() {
   const [lastPreview, setLastPreview] = useState("");
   const [lineCount, setLineCount] = useState(0);
   const [lastPushAt, setLastPushAt] = useState<number | null>(null);
+  const [repairNotice, setRepairNotice] = useState<string | null>(null);
+  const [repairing, setRepairing] = useState(false);
 
   const writerRef = useRef<SubtitleWriterState>(createSubtitleWriterState());
   const recognizerRef = useRef<SpeechRecognizer | null>(null);
@@ -120,7 +125,15 @@ export function SpeechBridge() {
       return;
     }
 
-    const lines = mapSubtitleLines(data?.lines ?? []);
+    const repair = await repairSubtitlesInDb(supabase, joinEventId, LIVE_SYNC_DAY);
+    const lines = repair.ok ? repair.lines : mapSubtitleLines(data?.lines ?? []);
+
+    if (repair.ok && repair.changed) {
+      setRepairNotice(
+        `Cleaned up duplicate subtitles: ${repair.before} → ${repair.after} lines. Students’ Live tab will update shortly.`
+      );
+    }
+
     writerRef.current = createSubtitleWriterState(
       lines,
       data?.full_transcript ?? ""
@@ -245,7 +258,7 @@ export function SpeechBridge() {
 
     const finalizedLineId = writerRef.current.currentLineId;
 
-    writerRef.current = applySpeechResult(writerRef.current, safe, true);
+    writerRef.current = finalizeSubtitleSegment(writerRef.current, safe);
     setLastPreview(safe.trim());
     setLineCount(writerRef.current.lines.length);
     pusherRef.current?.push(writerRef.current, true);
@@ -289,12 +302,6 @@ export function SpeechBridge() {
 
       if (isFinal) {
         clearPauseBubbleTimer();
-        const lastClosed = writerRef.current.lines
-          .filter((l) => !l.isCurrent)
-          .at(-1);
-        if (lastClosed?.textEn.trim() === safe.trim()) {
-          return;
-        }
         commitFinalSegment(safe);
         return;
       }
@@ -366,6 +373,42 @@ export function SpeechBridge() {
     };
   }, [meta.status, micEnabled, startRecognizer, stopRecognizer]);
 
+  useEffect(() => {
+    if (!sessionReady || !authOk) return;
+    const stopExtraction = startNoteExtraction({
+      eventId: joinEventId,
+      day: LIVE_SYNC_DAY,
+      getStatus: () => statusRef.current,
+      getTranscript: () => writerRef.current.fullTranscript,
+      onError: (message) => setPushError(message),
+    });
+    return stopExtraction;
+  }, [sessionReady, authOk, joinEventId]);
+
+  const runTranscriptRepair = useCallback(async () => {
+    setRepairing(true);
+    setRepairNotice(null);
+    setPushError(null);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const result = await repairSubtitlesInDb(supabase, joinEventId, LIVE_SYNC_DAY);
+      if (!result.ok) {
+        setPushError(result.error);
+        return;
+      }
+      await loadSubtitlesFromDb();
+      if (result.changed) {
+        setRepairNotice(
+          `Cleaned up duplicate subtitles: ${result.before} → ${result.after} lines.`
+        );
+      } else {
+        setRepairNotice("Transcript already looks clean — no duplicate lines found.");
+      }
+    } finally {
+      setRepairing(false);
+    }
+  }, [joinEventId, loadSubtitlesFromDb]);
+
   const enableMic = useCallback(async () => {
     setSpeechError(null);
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -428,6 +471,12 @@ export function SpeechBridge() {
           <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-900">
             Web Speech API is not available. Use Google Chrome on macOS (not
             Safari).
+          </div>
+        )}
+
+        {repairNotice && (
+          <div className="mb-4 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+            {repairNotice}
           </div>
         )}
 
@@ -565,6 +614,20 @@ export function SpeechBridge() {
             {lastPushAt != null && (
               <> · last sync {new Date(lastPushAt).toLocaleTimeString()}</>
             )}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-4"
+            disabled={repairing}
+            onClick={() => void runTranscriptRepair()}
+          >
+            {repairing ? "Cleaning…" : "Clean up duplicate subtitles"}
+          </Button>
+          <p className="mt-2 text-xs text-muted">
+            Use this if the student Live tab has pages of repeated bubbles from
+            an earlier session.
           </p>
         </section>
 
