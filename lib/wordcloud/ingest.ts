@@ -1,9 +1,16 @@
 import { categorizeWord, tokenizeSpeech } from "@/lib/wordcloud/simulation";
 
-export type WordcloudWordsRecord = Record<
-  string,
-  { count: number; category: string; lastAt: string }
->;
+const MAX_TIMESTAMPS_PER_WORD = 200;
+
+export type WordcloudWordMeta = {
+  count: number;
+  category: string;
+  lastAt: string;
+  /** Each time the word was heard (ms). Drives size + Live reset filter. */
+  at?: number[];
+};
+
+export type WordcloudWordsRecord = Record<string, WordcloudWordMeta>;
 
 function displayWord(token: string): string {
   return token.charAt(0).toUpperCase() + token.slice(1).replace(/['-]/g, "");
@@ -17,6 +24,19 @@ function findWordKey(words: WordcloudWordsRecord, token: string): string | null 
   return null;
 }
 
+function appendTimestamp(existing: WordcloudWordMeta | undefined, ms: number) {
+  const prev = existing?.at?.length
+    ? existing.at
+    : existing?.count
+      ? Array.from(
+          { length: existing.count },
+          (_, i) => ms - i * 1000
+        )
+      : [];
+  const at = [...prev, ms].slice(-MAX_TIMESTAMPS_PER_WORD);
+  return at;
+}
+
 /** Merge tokens from one finalized speech chunk into the Supabase JSON shape. */
 export function ingestSpeechIntoWordcloud(
   words: WordcloudWordsRecord,
@@ -27,6 +47,7 @@ export function ingestSpeechIntoWordcloud(
   if (!trimmed) return words;
 
   const iso = at.toISOString();
+  const ms = at.getTime();
   const next: WordcloudWordsRecord = { ...words };
 
   for (const token of tokenizeSpeech(trimmed)) {
@@ -35,19 +56,14 @@ export function ingestSpeechIntoWordcloud(
 
     const key = findWordKey(next, token) ?? word;
     const existing = next[key];
-    if (existing) {
-      next[key] = {
-        ...existing,
-        count: existing.count + 1,
-        lastAt: iso,
-      };
-    } else {
-      next[key] = {
-        count: 1,
-        category: categorizeWord(token),
-        lastAt: iso,
-      };
-    }
+    const atList = appendTimestamp(existing, ms);
+
+    next[key] = {
+      count: atList.length,
+      category: existing?.category ?? categorizeWord(token),
+      lastAt: iso,
+      at: atList,
+    };
   }
 
   return next;

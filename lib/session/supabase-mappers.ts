@@ -106,17 +106,23 @@ export function mapNoteCards(
 }
 
 export function mapWordcloudJson(
-  words: Record<string, { count: number; category: string; lastAt: string }>
+  words: Record<
+    string,
+    { count: number; category: string; lastAt: string; at?: number[] }
+  >
 ): WordCloudEntry[] {
   const entries: WordCloudEntry[] = [];
   for (const [word, meta] of Object.entries(words)) {
-    const count = Math.max(1, meta.count ?? 1);
     const last = new Date(meta.lastAt).getTime();
     const base = Number.isNaN(last) ? Date.now() : last;
-    const occurrences = Array.from(
-      { length: count },
-      (_, i) => base - i * 1000
-    );
+    const occurrences =
+      meta.at?.length && meta.at.every((t) => typeof t === "number")
+        ? meta.at
+        : Array.from(
+            { length: Math.max(1, meta.count ?? 1) },
+            (_, i) => base - i * 1000
+          );
+
     entries.push({
       word,
       category: (meta.category || "general") as WordCloudEntry["category"],

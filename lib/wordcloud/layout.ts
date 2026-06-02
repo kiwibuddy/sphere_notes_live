@@ -48,6 +48,7 @@ function collides(
   );
 }
 
+/** Size from repetition count — keeps a visible gap between rare and common words. */
 function fontSizeForCount(
   count: number,
   maxCount: number,
@@ -56,9 +57,87 @@ function fontSizeForCount(
 ): number {
   if (maxCount <= 1) return maxFont;
   const ratio = count / maxCount;
-  // Sqrt curve: repeated words read clearly larger than one-off terms
-  const emphasis = Math.pow(ratio, 0.45);
+  const floor = 0.32;
+  const emphasis = floor + (1 - floor) * Math.pow(ratio, 0.35);
   return minFont + emphasis * (maxFont - minFont);
+}
+
+/** Rank-based tier so the top words stay huge even when the canvas is crowded. */
+function fontSizeForRank(
+  rank: number,
+  minFont: number,
+  maxFont: number
+): number {
+  if (rank === 0) return maxFont;
+  if (rank === 1) return maxFont * 0.78;
+  if (rank === 2) return maxFont * 0.65;
+  if (rank <= 5) return maxFont * 0.5;
+  if (rank <= 10) return maxFont * 0.38;
+  if (rank <= 18) return maxFont * 0.28;
+  return minFont;
+}
+
+function targetFontSize(
+  item: WordCloudWord,
+  rank: number,
+  maxCount: number,
+  minFont: number,
+  maxFont: number
+): number {
+  const byCount = fontSizeForCount(item.count, maxCount, minFont, maxFont);
+  const byRank = fontSizeForRank(rank, minFont, maxFont);
+  return Math.max(byCount, byRank);
+}
+
+function tryPlaceWord(
+  ctx: CanvasRenderingContext2D,
+  item: WordCloudWord,
+  fontSize: number,
+  placed: PlacedWord[],
+  cx: number,
+  cy: number,
+  width: number,
+  height: number,
+  margin: number,
+  maxSteps: number
+): PlacedWord | null {
+  const { width: w, height: h } = measureWord(ctx, item.word, fontSize);
+
+  let angle = 0;
+  let radius = 0;
+
+  for (let step = 0; step < maxSteps; step++) {
+    const x = cx + radius * Math.cos(angle) - w / 2;
+    const y = cy + radius * Math.sin(angle) - h / 2;
+
+    const candidate = { x, y, width: w, height: h };
+    const inBounds =
+      x >= margin &&
+      y >= margin &&
+      x + w <= width - margin &&
+      y + h <= height - margin;
+
+    if (
+      inBounds &&
+      !placed.some((p) => collides(candidate, p, 4))
+    ) {
+      return {
+        word: item.word,
+        x,
+        y,
+        width: w,
+        height: h,
+        fontSize,
+        count: item.count,
+        category: item.category,
+      };
+    }
+
+    angle += 0.32;
+    radius += 0.38;
+  }
+
+  return null;
 }
 
 export function layoutWordCloud(
@@ -71,85 +150,44 @@ export function layoutWordCloud(
 
   const sorted = [...words]
     .sort((a, b) => b.count - a.count)
-    .slice(0, 48);
+    .slice(0, 40);
 
   const maxCount = Math.max(...sorted.map((w) => w.count), 1);
   const minDim = Math.min(width, height);
-  const minFont = Math.max(11, minDim * 0.032);
-  const maxFont = Math.max(minFont + 14, minDim * 0.2);
+  const minFont = Math.max(12, minDim * 0.034);
+  const maxFont = Math.max(minFont + 20, minDim * 0.26);
   const placed: PlacedWord[] = [];
   const cx = width / 2;
   const cy = height / 2;
-  const margin = 8;
+  const margin = 6;
 
-  for (const item of sorted) {
-    const targetSize = fontSizeForCount(
-      item.count,
-      maxCount,
-      minFont,
-      maxFont
-    );
-    let found = false;
+  sorted.forEach((item, rank) => {
+    const target = targetFontSize(item, rank, maxCount, minFont, maxFont);
+    const minAllowed = Math.max(minFont, target * 0.82);
 
-    for (
-      let fontSize = targetSize;
-      fontSize >= minFont && !found;
-      fontSize -= 2
-    ) {
-      const { width: w, height: h } = measureWord(ctx, item.word, fontSize);
+    let placedWord: PlacedWord | null = null;
+    const steps = rank < 3 ? 1200 : 700;
 
-      let angle = 0;
-      let radius = 0;
-
-      for (let step = 0; step < 900; step++) {
-        const x = cx + radius * Math.cos(angle) - w / 2;
-        const y = cy + radius * Math.sin(angle) - h / 2;
-
-        const candidate = { x, y, width: w, height: h };
-        const inBounds =
-          x >= margin &&
-          y >= margin &&
-          x + w <= width - margin &&
-          y + h <= height - margin;
-
-        if (
-          inBounds &&
-          !placed.some((p) => collides(candidate, p, 6))
-        ) {
-          placed.push({
-            word: item.word,
-            x,
-            y,
-            width: w,
-            height: h,
-            fontSize,
-            count: item.count,
-            category: item.category,
-          });
-          found = true;
-          break;
-        }
-
-        angle += 0.35;
-        radius += 0.42;
-      }
-    }
-
-    if (!found && placed.length === 0) {
-      const fontSize = targetSize;
-      const { width: w, height: h } = measureWord(ctx, item.word, fontSize);
-      placed.push({
-        word: item.word,
-        x: cx - w / 2,
-        y: cy - h / 2,
-        width: w,
-        height: h,
+    for (let fontSize = target; fontSize >= minAllowed; fontSize -= 1) {
+      placedWord = tryPlaceWord(
+        ctx,
+        item,
         fontSize,
-        count: item.count,
-        category: item.category,
-      });
+        placed,
+        cx,
+        cy,
+        width,
+        height,
+        margin,
+        steps
+      );
+      if (placedWord) break;
     }
-  }
+
+    if (placedWord) {
+      placed.push(placedWord);
+    }
+  });
 
   return placed;
 }
