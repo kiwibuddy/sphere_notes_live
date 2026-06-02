@@ -110,19 +110,22 @@ export function mapWordcloudJson(
 ): WordCloudEntry[] {
   const entries: WordCloudEntry[] = [];
   for (const [word, meta] of Object.entries(words)) {
-    const occurrences: number[] = [];
+    const count = Math.max(1, meta.count ?? 1);
     const last = new Date(meta.lastAt).getTime();
     const base = Number.isNaN(last) ? Date.now() : last;
-    for (let i = 0; i < meta.count; i++) {
-      occurrences.push(base - i * 1000);
-    }
+    const occurrences = Array.from(
+      { length: count },
+      (_, i) => base - i * 1000
+    );
     entries.push({
       word,
       category: (meta.category || "general") as WordCloudEntry["category"],
       occurrences,
     });
   }
-  return entries;
+  return entries.sort(
+    (a, b) => b.occurrences.length - a.occurrences.length
+  );
 }
 
 export function displayModeFromRow(row: {

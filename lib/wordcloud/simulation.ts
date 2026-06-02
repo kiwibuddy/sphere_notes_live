@@ -21,7 +21,7 @@ const NAME_HINTS = new Set([
 
 const CONCEPT_HINTS = new Set([
   "worldview", "ethics", "human", "truth", "culture", "reality", "authority",
-  "cosmos", "discipleship", "creation", "mission",
+  "cosmos", "discipleship", "creation", "mission", "spheres", "sphere",
 ]);
 
 export function categorizeWord(word: string): WordCloudEntry["category"] {

@@ -9,6 +9,14 @@ function displayWord(token: string): string {
   return token.charAt(0).toUpperCase() + token.slice(1).replace(/['-]/g, "");
 }
 
+function findWordKey(words: WordcloudWordsRecord, token: string): string | null {
+  const lower = token.toLowerCase();
+  for (const key of Object.keys(words)) {
+    if (key.toLowerCase() === lower) return key;
+  }
+  return null;
+}
+
 /** Merge tokens from one finalized speech chunk into the Supabase JSON shape. */
 export function ingestSpeechIntoWordcloud(
   words: WordcloudWordsRecord,
@@ -25,15 +33,16 @@ export function ingestSpeechIntoWordcloud(
     const word = displayWord(token);
     if (word.length < 3) continue;
 
-    const existing = next[word];
+    const key = findWordKey(next, token) ?? word;
+    const existing = next[key];
     if (existing) {
-      next[word] = {
+      next[key] = {
         ...existing,
         count: existing.count + 1,
         lastAt: iso,
       };
     } else {
-      next[word] = {
+      next[key] = {
         count: 1,
         category: categorizeWord(token),
         lastAt: iso,
