@@ -76,3 +76,14 @@
     @apply italic;
   }
 }
+
+@media print {
+  .mine-notes-toolbar,
+  .mine-export-pdf,
+  .mine-notes-actions {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+  }
+}

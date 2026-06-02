@@ -1,6 +1,4 @@
 "use client";
-
-import { useSession } from "@/lib/session/context";
 import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { useMineNotes } from "@/hooks/useMineNotes";
 import { NotesFormatToolbar } from "@/components/notes/NotesFormatToolbar";
@@ -9,8 +7,14 @@ import { cn } from "@/lib/utils";
 import { useCallback, useEffect, useRef } from "react";
 
 export function MineEditor() {
-  const { meta } = useSession();
-  const { content, clippings, lastSaved, updateContent, removeClipping } =
+  const {
+    content,
+    clippings,
+    lastSaved,
+    updateContent,
+    removeClipping,
+    clearNotes,
+  } =
     useMineNotes(LIVE_SYNC_DAY);
   const editorRef = useRef<HTMLDivElement>(null);
   const skipSync = useRef(false);
@@ -41,6 +45,14 @@ export function MineEditor() {
       /* clipboard unavailable */
     }
   };
+
+  const handleExportPdf = useCallback(() => {
+    persistEditor();
+    // Clear after the print dialog finishes (e.g. "Save as PDF").
+    const expire = () => clearNotes();
+    window.addEventListener("afterprint", expire, { once: true });
+    window.print();
+  }, [clearNotes, persistEditor]);
 
   return (
     <div className="flex h-full flex-col bg-[#F5F0E8]">
@@ -79,7 +91,7 @@ export function MineEditor() {
         )}
       </div>
 
-      <div className="border-t border-border/50 bg-surface/50 p-3 md:p-4">
+      <div className="mine-notes-actions border-t border-border/50 bg-surface/50 p-3 md:p-4">
         <div className="mx-auto flex max-w-lg gap-2">
           <button
             type="button"
@@ -90,7 +102,8 @@ export function MineEditor() {
           </button>
           <button
             type="button"
-            className="flex-1 rounded-lg bg-tab-mine py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 md:text-sm"
+            onClick={handleExportPdf}
+            className="mine-export-pdf flex-1 rounded-lg bg-tab-mine py-2.5 text-xs font-medium text-white transition-opacity hover:opacity-90 md:text-sm"
           >
             Export PDF
           </button>

@@ -1,17 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSession } from "@/lib/session/context";
 import type { Clipping, SupportedLocale } from "@/types/session";
 import { LOCALE_LABELS } from "@/types/session";
 
 const MINE_PREFIX = "spherenotes-mine-day-";
 
 export function useMineNotes(day: number) {
+  const { meta } = useSession();
+
   const [content, setContent] = useState("");
   const [clippings, setClippings] = useState<Clipping[]>([]);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const storageKey = `${MINE_PREFIX}${day}`;
+
+  const clearNotes = useCallback(() => {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {
+      /* ignore */
+    }
+    setContent("");
+    setClippings([]);
+    setLastSaved(null);
+  }, [storageKey]);
 
   useEffect(() => {
     try {
@@ -32,6 +46,23 @@ export function useMineNotes(day: number) {
       setClippings([]);
     }
   }, [storageKey]);
+
+  // Expire student notes between sessions so exported PDFs don't include stale content.
+  const prevStatusRef = useRef(meta.status);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    const next = meta.status;
+    if (prev === next) return;
+
+    const isGoLive = prev === "waiting" && next === "live";
+    const isEndDay = (prev === "live" || prev === "paused") && next === "waiting";
+
+    if (isGoLive || isEndDay) {
+      clearNotes();
+    }
+
+    prevStatusRef.current = next;
+  }, [meta.status, clearNotes]);
 
   const save = useCallback(
     (newContent: string, newClippings: Clipping[]) => {
@@ -81,6 +112,7 @@ export function useMineNotes(day: number) {
     updateContent,
     addClipping,
     removeClipping,
+    clearNotes,
   };
 }
 

@@ -4,7 +4,7 @@ import type { DayArchive } from "@/types/session";
 import { SubtitleFeed } from "@/components/live/SubtitleFeed";
 import { QuestionList } from "@/components/qa/QuestionList";
 import { NoteCardRenderer } from "@/components/cards/NoteCardRenderer";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 const ARCHIVE_TABS = ["Live", "Q&A", "Slides", "Notes"] as const;
@@ -15,6 +15,11 @@ interface WeekArchivePanelProps {
 
 export function WeekArchivePanel({ archive }: WeekArchivePanelProps) {
   const [tab, setTab] = useState<(typeof ARCHIVE_TABS)[number]>("Live");
+
+  // When the user switches to a different archived day, reset panel tab state.
+  useEffect(() => {
+    setTab("Live");
+  }, [archive.day]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
