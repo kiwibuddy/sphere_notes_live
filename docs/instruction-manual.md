@@ -56,15 +56,15 @@ Student phones ──► /student  (NOT Zoom)
 2. Keynote → **Settings → Slideshow**:
    - Present on: **external display**
    - Presenter display on: **MacBook**
-3. **Export slides (mock or live):** Keynote → File → Export To → **Images** → PNG sequence into:
+3. **Export slides:** Keynote → File → Export To → **Images** → PNG sequence into:
    ```
-   public/slides/day-1/   (or day-2, day-3, day-4)
+   public/slides/
    ```
-   Keynote names files like `The_Kingdom_Blueprint.001.png` — **that’s fine**; no need to rename to `slide-001.png`.
+   One **flat folder** for the full deck (e.g. `Reoganland June 2025.001.png`). Keynote `.001.png` names are fine — no `day-1/` subfolders.
    
    **PDF files do not work** — the app only loads `.png`. Export from Keynote → Images, or convert your PDF to a PNG sequence first.
 4. In app: `/presenter` → **⚙ Settings** → **Refresh** to pick up new PNGs.
-5. **Deploy:** Day-1 PNGs are already in git. Push to Vercel when backend is ready so phones off your Wi‑Fi can load slides.
+5. **Deploy:** Push to GitHub → Vercel redeploys. Production: **https://sphere-notes-live.vercel.app**
 
 ### B. OBS — create 6 scenes
 
@@ -81,7 +81,7 @@ Names must match the app defaults (or rename in iPad OBS settings):
 
 **SphereNotes browser source:**
 
-- URL: `http://localhost:3000/display` (rehearsal) or `https://your-app.vercel.app/display` (production)
+- URL: `http://localhost:3000/display` (rehearsal) or `https://sphere-notes-live.vercel.app/display` (production)
 - 1920 × 1080 · Shutdown when not visible: **Off** · Refresh on scene: **Off**
 
 **WebSocket:** Tools → WebSocket Server Settings → Enable · password · port **4455**
@@ -133,7 +133,7 @@ Add `/presenter` to iPad **Home Screen** for full-screen remote.
 1. **⚙ Settings** (gear, top-right) — set **week topic**, **day topic**, **date**; tap **Refresh** if you added slide PNGs.
 2. **Go Live** (header).
 3. **Phone** → `http://YOUR-MAC-IP:3000/student` — LIVE badge *(same browser storage only until Supabase — see Part 9)*.
-4. **Phone** → **Slides** tab — shows **current slide only** (follows presenter slide number in mock session on **same browser/storage**). Tap **fullscreen** (top-right). Toggle **captions** for mock subtitles (language picker top-right; text at bottom). After ⚙ **Refresh** in presenter settings, real Day-1 PNGs load from `public/slides/day-1/`.
+4. **Phone** → **Slides** tab — shows **current slide only** (follows presenter slide # via Supabase `day_slides`). Tap **fullscreen** (top-right). Toggle **captions** for mock subtitles. After ⚙ **Refresh** on presenter, PNGs load from `public/slides/` (178 on production after Jun 2026 deploy).
 5. **Phone** — browse tabs; submit/vote Q&A while live.
 6. **Show on projector:**
    - **Word cloud** — then OBS **SphereNotes**
@@ -193,7 +193,7 @@ Open from the **gear icon** (top-right). Not on the main teaching screen.
 | **Session topics** | Tap a field to edit week title, today’s topic. **Date** uses a calendar picker + **Today** button. Saves automatically to this browser. |
 | **Slides** | After Keynote export, tap **Refresh**. Use prev/next to **test** slide images — does not control Keynote. |
 
-**Keynote export tip:** Files like `My_Talk.001.png` work. Put them in `public/slides/day-N/` matching today’s day number.
+**Keynote export tip:** Files like `My_Talk.001.png` work. Put them in **`public/slides/`** (one folder for the full deck).
 
 ### Show on projector
 
@@ -226,7 +226,7 @@ Six scenes — switches Mac OBS. Not the same as “Show on projector.”
 
 ### T−15 — Checks
 
-- [ ] PNGs for today’s day in repo / CDN (`public/slides/day-N/` — any `.png` names)
+- [ ] Full deck PNGs in repo / Vercel (`public/slides/` — any `.png` names)
 - [ ] **(mock now)** ⚙ Refresh slides on presenter after export
 - [ ] slide-bridge running **(LIVE)**
 - [ ] OBS Connect green on iPad
@@ -282,7 +282,7 @@ Five main tabs: **Live** · **Q&A** · **Slides** · **Notes** (auto / mine / cl
 | No subtitles | **(LIVE)** Open `/presenter/speech` on Mac Chrome |
 | Need full session transcript | **(LIVE)** End Day → **Download transcript** on presenter — not Otter |
 | Subtitles too inaccurate after rehearsal | Consider **Deepgram** upgrade (source-of-truth §10 Step 13) — not a second app |
-| No slide images on phone | ⚙ **Refresh** on presenter; PNGs must exist in `public/slides/day-N/`; phone must hit same server (Mac IP dev or Vercel after deploy) |
+| No slide images on phone | ⚙ **Refresh** on presenter; PNGs in **`public/slides/`**; hard-refresh if UI still mentions `day-1` (old deploy); use Vercel URL or same dev server |
 | Slides don’t follow Keynote | **Expected** until `slide-bridge.js` + Supabase — room uses OBS Keynote; phones need bridge |
 | Fullscreen exits after a few seconds | **Fixed** in code (was session re-render) — pull latest; report if it returns |
 | Topics don’t update on student phone | **Expected in mock** if phone is a different browser — need Supabase (Phase 1) |
@@ -292,12 +292,18 @@ Five main tabs: **Live** · **Q&A** · **Slides** · **Notes** (auto / mine / cl
 
 ## Part 8 — URLs
 
-| Role | Mock | Live |
-|------|------|------|
-| Presenter (iPad) | `http://MAC-IP:3000/presenter` | `https://…/presenter` |
-| Student | `http://MAC-IP:3000/student` | `https://…/student?event=…&day=N` |
-| Speech (Mac) | — | `https://…/presenter/speech` **(not built)** |
-| Display (OBS) | `http://localhost:3000/display` | `https://…/display` |
+**Production (Vercel):** https://sphere-notes-live.vercel.app
+
+| Role | Local dev | Production |
+|------|-----------|------------|
+| Presenter (iPad) | `http://MAC-IP:3000/presenter` | https://sphere-notes-live.vercel.app/presenter |
+| Student | `http://MAC-IP:3000/student?event=biblical-worldview-2026&day=1` | https://sphere-notes-live.vercel.app/student?event=biblical-worldview-2026&day=1 |
+| Speech (Mac) | — | `/presenter/speech` **(not built)** |
+| Display (OBS) | `http://localhost:3000/display` | https://sphere-notes-live.vercel.app/display |
+
+**iPad:** no separate URL — use `/presenter` and **Add to Home Screen**.
+
+Set `NEXT_PUBLIC_APP_URL=https://sphere-notes-live.vercel.app` so QR/join links never use `localhost`.
 
 ---
 
@@ -306,22 +312,23 @@ Five main tabs: **Live** · **Q&A** · **Slides** · **Notes** (auto / mine / cl
 1. Skim [source-of-truth.md §8](./source-of-truth.md#8-concerns--mismatches-review-before-next-session) — open concerns.
 2. Commit any uncommitted work (`TopicEditor` date picker, doc updates).
 3. Note any friction in the dry-run table (source-of-truth §5).
-4. Next build priority: **[source-of-truth.md §10](./source-of-truth.md#10-backend-implementation-checklist) Step 1 — Supabase**.
+4. Next build priority: **[source-of-truth.md §10](./source-of-truth.md#10-backend-implementation-checklist) Step 5 — slide-bridge** (push local script) + Step 6 — `/presenter/speech`.
 
-### End-of-session flags (1 Jun 2026 — end of day)
+### End-of-session flags (2 Jun 2026)
 
 | Flag | Status / action |
 |------|-----------------|
-| **Day-1 PNGs** | ✅ Committed in git — still need **Vercel deploy** for phones off dev server |
-| **Main code + docs** | ✅ Pushed (`922701a`, `27deef5`, `24eae03`) |
-| **Date picker** | 🟡 Modified, not committed — `TopicEditor` + `lib/dates/sessionDate.ts` |
-| **Mock = one browser** | Go Live, topics, slide number don’t sync iPad ↔ phone until Supabase (§10 Step 1–3) |
-| **slide-bridge missing** | Room slides = OBS Keynote; phone Slides tab ≠ live Keynote position (§10 Step 5) |
+| **Slide PNGs** | ✅ 178 files in `public/slides/`; flat-folder API deployed (`6c8e210`) |
+| **Vercel** | ✅ https://sphere-notes-live.vercel.app — `/api/slides` returns 178 |
+| **Supabase session** | ✅ On `main` — env vars required; run migrations on your project |
+| **slide-bridge** | ❌ Stub on `main` — full script local only; push when ready (§10 Step 5) |
+| **Date picker** | 🟡 Check if `TopicEditor` + `lib/dates/sessionDate.ts` still uncommitted |
+| **Next** | Phone test on Vercel Slides tab; OBS rehearsal; push slide-bridge |
 | **No `/presenter/speech`** | Subtitles, translation, word cloud from voice all blocked (§10 Steps 6–9) |
 | **4 days in code** | Confirm if your event is 4 or 5 days — update `totalDays` if needed |
 | **No day jump** | Can’t skip to Day 3 without End Day twice (or future URL param) |
 | **README outdated** | Still mentions “390px” phone frame — app is responsive full-width now |
-| **PDF ≠ slides** | App needs PNG in `public/slides/day-N/` — not PDF |
+| **PDF ≠ slides** | App needs PNG in `public/slides/` — not PDF |
 
 ---
 

@@ -1,6 +1,6 @@
 # SphereNotes Live — Source of Truth
 
-**Last updated:** 1 June 2026 (transcript export + ASR upgrade path)  
+**Last updated:** 2 June 2026 (flat slide deck + Vercel production URLs)  
 **Replaces for day-to-day decisions:** `SphereNotesLive-PRD-v1.0.docx` (historical), scattered chat notes  
 **Companion docs:** [Instruction Manual](./instruction-manual.md) · [Design Brief](../SphereNotesLive-DesignBrief.md)
 
@@ -23,7 +23,7 @@ SphereNotes Live is a **phone-based second screen** for live teaching. Students 
 | **iPad** | `/presenter` — Go Live / Pause / End Day, **Show on projector**, question picker, **6 OBS scene buttons** (bottom bar) |
 | **MacBook** | Zoom (classroom camera) + Keynote **presenter notes** + Chrome **`/presenter/speech`** (mic/transcription — **not built yet**) |
 | **External monitor** | Keynote **slideshow** fullscreen — OBS **Keynote** scene captures this |
-| **Student phones** | `/student?event=…&day=…` (URL params **not wired yet** — mock uses localStorage) |
+| **Student phones** | `/student?event=…&day=…` — **day from URL on student** when Supabase is configured; teaching-day topics still per `day` row |
 | **Projector** | Zoom ← OBS Virtual Camera |
 
 **Audio:** Lapel mic → Mac input (Zoom + transcription). AirPods → Mac output (hear Zoom). Do not use AirPods as mic while teaching.
@@ -62,11 +62,23 @@ Typical highlight: pick Word cloud or a Question → tap OBS **SphereNotes**.
 | Live sync | **Supabase Realtime** (not Firebase) |
 | AI | Claude API via `/api/claude/*` |
 | Speech | **Web Speech API** default — Chrome on Mac (`/presenter/speech` — planned). **Optional upgrade:** Deepgram streaming ASR (see §10 Step 13). **Not using:** Otter / Granola (personal meeting tools — no live broadcast to student phones). |
-| Slides | Keynote → PNG in `public/slides/day-{n}/` + **`slide-bridge.js`** on Mac |
+| Slides | Keynote → PNG in **`public/slides/`** (flat full deck) + **`slide-bridge.js`** on Mac (stub on `main`; full bridge uncommitted locally) |
 | OBS remote | WebSocket v5 from iPad browser → Mac OBS (LAN only) |
 | Auth | **Supabase Anonymous Auth** on student join (for vote dedup) — planned |
 | Bible text | **Bundled JSON** (KJV + BSB) |
-| Hosting | Vercel |
+| Hosting | Vercel — **https://sphere-notes-live.vercel.app** |
+
+### Production URLs (Vercel)
+
+| Role | URL |
+|------|-----|
+| **iPad presenter** | https://sphere-notes-live.vercel.app/presenter |
+| **Student join (day 1)** | https://sphere-notes-live.vercel.app/student?event=biblical-worldview-2026&day=1 |
+| **OBS `/display`** | https://sphere-notes-live.vercel.app/display |
+
+Set **`NEXT_PUBLIC_APP_URL=https://sphere-notes-live.vercel.app`** on Vercel (and `.env.local` when testing QR from localhost) so join links/QR never point at `localhost`.
+
+There is **no separate iPad route** — iPad uses `/presenter` (add to Home Screen in Safari).
 
 ### Event model
 
@@ -101,7 +113,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Week archive (read-only past days) | ✅ | Mock archives |
 | Translation language picker | 🟡 | UI only; API stub |
 | Export PDF (My Notes) | ❌ | Button present, not wired |
-| Student join via URL `event` + `day` | ❌ | Day/session not URL-driven yet |
+| Student join via URL `event` + `day` | 🟡 | Student route reads `?event` + `?day` with Supabase; presenter uses `current_day` for join QR |
 | Session hydration | ✅ | localStorage restored after mount (no Day 1/3 SSR mismatch) |
 
 ### B. Presenter app
@@ -109,7 +121,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Item | Status | Notes |
 |------|--------|-------|
 | `/presenter` dashboard | 🟡 | Go Live / Pause / End Day in header; projector + questions; settings gear |
-| Session settings modal (⚙ gear) | ✅ | Week topic, day topic, **native date picker + Today**; slide folder hint, refresh PNGs, manual slide step (test) |
+| Session settings modal (⚙ gear) | ✅ | Week topic, day topic, **native date picker + Today**; **`public/slides/`** hint, refresh PNGs, manual slide step (test) |
 | `/presenter/setup` full checklist | ❌ | Partially replaced by settings modal — no mic/Supabase/QR checks yet |
 | `/presenter/speech` (Mac speech bridge) | ❌ | **Required for live** — not built |
 | iPad-friendly touch layout | 🟡 | Large projector + OBS buttons; session controls in header |
@@ -119,7 +131,7 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Pull quote on projector | ❌ | Removed from UI (display still supports `quote` mode in code) |
 | Stats / reactions on projector | ❌ | Removed from UI by design — optional later |
 | Correction dictionary UI | ❌ | Not built |
-| Student join QR + link on presenter | ❌ | Not built |
+| Student join QR + link on presenter | ✅ | `PresenterJoinPanel` — QR + copy link (`buildStudentJoinUrl`) |
 | Connection / mic status indicators | ❌ | Not built |
 | End Day transcript download (.txt) | ❌ | `fullTranscript` + subtitles in archive schema; export button not built |
 | Day switcher on main UI | ✅ | **Removed** — End Day advances; see concerns §8 |
@@ -141,17 +153,18 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 
 | Item | Status | Notes |
 |------|--------|-------|
-| MockSessionProvider | ✅ | Default for all routes |
-| SupabaseSessionProvider | ❌ | Stub in `lib/supabase/client.ts` |
-| Supabase schema + RLS | ❌ | Designed in `types/realtime.ts` |
-| Anonymous auth on join | ❌ | Decision locked, not implemented |
+| MockSessionProvider | ❌ | **Removed** — app requires Supabase env or shows setup screen |
+| SupabaseSessionProvider | ✅ | `lib/session/supabase-provider.tsx`; realtime on questions, display, slides, reactions |
+| Supabase schema + RLS | 🟡 | SQL in `supabase/migrations/` — run on your Supabase project |
+| Anonymous auth on join | ✅ | `ensureSupabaseAuth()` on session load |
 | `POST /api/claude/correct` | ❌ | Stub |
 | `POST /api/claude/notes` | ❌ | Stub |
 | `POST /api/translate` | ❌ | Stub |
 | Web Speech → Supabase pipeline | ❌ | `lib/speech.ts` wrapper only |
-| `GET /api/slides` | ✅ | Scans `public/slides/day-{n}/*.png`; any filename; sorts by number (Keynote `.001.png` OK) |
-| slide-bridge.js | ❌ | Stub only — Keynote does **not** auto-advance phone slides yet |
-| Slide PNGs in repo / deploy | 🟡 | **18 PNGs committed** for day-1 (`The_Kingdom_Blueprint.001.png` … `.018.png`); **Vercel deploy + env vars** still needed for phones off dev server |
+| `GET /api/slides` | ✅ | Scans **`public/slides/*.png`** only (flat deck); sorts by trailing `.NNN.png` number |
+| Slide sync row (`day_slides`) | 🟡 | Uses **`SLIDE_SYNC_DAY = 1`** for deck position (Keynote slide #), not per teaching-day folders |
+| slide-bridge.js | ❌ | **Stub on `main`** — full Keynote→Supabase poll exists locally but not pushed |
+| Slide PNGs in repo / deploy | ✅ | **178 PNGs** in `public/slides/` (`Reoganland June 2025.*.png`); **Vercel serves 178** via `/api/slides` after deploy `6c8e210` |
 | End Day → archive to Supabase | ❌ | Mock week tab only; includes `subtitles` + `fullTranscript` when live |
 | End Day transcript export | ❌ | Download `.txt` / `.md` from presenter after archive (§10 Step 11.5) |
 | Pause stops speech + AI pipelines | ❌ | Status toggles only (mock) |
@@ -165,57 +178,61 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 | Zoom → OBS Virtual Camera | ❌ | You — one-time |
 | Keynote dual-display (slides on external) | ❌ | You — one-time |
 | Lapel mic + AirPods output | ❌ | You — per session |
-| Vercel deploy + env vars | ❌ | When backend ready |
-| Phase 0 mock dry-run | 🟡 | App UI ready; OBS on Mac is your next step |
+| Vercel deploy + env vars | 🟡 | **App deployed** at sphere-notes-live.vercel.app — confirm Supabase keys + `NEXT_PUBLIC_APP_URL` in Vercel dashboard |
+| Phase 0 mock dry-run | 🟡 | Supabase-backed session; OBS on Mac is your next step |
 
 ---
 
 ## 3. Roadmap to fully functioning live presentation
 
-### Phase 0 — Use mock app confidently ← **you are here**
+### Phase 0 — Room rehearsal (UI + OBS) ← **you are here**
 
-**Goal:** Learn UI + OBS layout with fake data.
+**Goal:** Learn UI + OBS layout; slides on production Vercel.
 
-- [x] Presenter UI: Go Live, projector section, OBS bar
-- [x] Settings modal: week/day topics, slide refresh
-- [x] Day 1 Keynote exported → `public/slides/day-1/` (18 PNGs, local)
+- [x] Presenter UI: Go Live, projector section, OBS bar, **student join QR**
+- [x] Settings modal: week/day topics, slide refresh → **`public/slides/`**
+- [x] Full Keynote deck exported → **`public/slides/`** (178 PNGs, committed)
 - [x] Instruction manual + this doc
 - [x] Student responsive layout (phone bottom tabs / desktop top nav)
 - [x] Slides tab UX: follow current slide, viewport-fit, subtitles overlay, fullscreen
 - [x] Mine notes toolbar + word cloud mock simulation
+- [x] **Vercel production** — sphere-notes-live.vercel.app (presenter + student + `/api/slides`)
 - [ ] Read [Instruction Manual](./instruction-manual.md) Part 3
-- [x] **Commit + push** main session work (3 commits on `main` incl. Day-1 PNGs + docs — see §9)
+- [ ] Phone (any network): Vercel student URL → **Slides** after ⚙ **Refresh** on presenter
 - [ ] Commit **date picker** work (`TopicEditor`, `lib/dates/sessionDate.ts`) when ready
-- [ ] Phone on same Wi‑Fi: open `/student/slides` after ⚙ Refresh slides
+- [ ] Push **slide-bridge.js** full implementation when ready to test Keynote auto-sync
 - [ ] Configure 6 OBS scenes on Mac
 - [ ] Practice: iPad `/presenter` → Connect OBS → switch scenes
 - [ ] Practice: Word cloud / question → OBS SphereNotes
 - [ ] Log friction in §5 dry-run table
 
-**Exit criteria:** Mock session on iPad + phone + OBS `/display` without API keys.
+**Exit criteria:** iPad presenter + phone on **Vercel** + OBS `/display`; slides load after Refresh (Supabase env required).
 
 ---
 
-### Phase 1 — Infrastructure
+### Phase 1 — Infrastructure ← **partially done**
 
-- [ ] Supabase project + RLS per `types/realtime.ts`
-- [ ] `SupabaseSessionProvider`; mock flag for local dev
-- [ ] Student + presenter: `?event=&day=` drives session
-- [ ] Anonymous auth on `/student` load
-- [ ] Vercel deploy + env vars
+- [x] Supabase schema SQL in `supabase/migrations/` (run on your project)
+- [x] `SupabaseSessionProvider` — required when env vars set
+- [x] Student: `?event=&day=` drives subscribed day; presenter join QR uses `current_day`
+- [x] Anonymous auth on session load
+- [x] Vercel deploy (app live)
+- [ ] Confirm all env vars on Vercel match `.env.local`
+- [ ] Full multi-device sync test (Go Live, display, reactions, Q&A)
 
-**Exit criteria:** Two phones + iPad show same Go Live / Pause state.
+**Exit criteria:** Two phones + iPad show same Go Live / Pause state on **production URL**.
 
 ---
 
-### Phase 2 — Slides ← **partially started**
+### Phase 2 — Slides ← **partially done**
 
-- [x] Export Keynote → `public/slides/day-{n}/` (Day 1 done — Keynote names OK)
-- [x] `GET /api/slides` + student Slide tab loads PNGs (dev server; ⚙ Refresh)
-- [x] Commit PNGs (Day 1 in git)
-- [ ] Deploy to Vercel + verify CDN slide URLs on phone
-- [ ] Implement `slide-bridge.js` (Keynote → auto slide number on phones)
-- [ ] Multi-device slide sync via Supabase (Phase 1)
+- [x] Export Keynote → **`public/slides/`** (full deck — 178 PNGs; Keynote `.001.png` names OK)
+- [x] `GET /api/slides` — flat folder; sort by `.NNN.png` suffix
+- [x] Commit PNGs + push (`d3ab3f2`, `6c8e210`)
+- [x] Deploy to Vercel — `/api/slides` returns **178** on production
+- [x] Presenter ⚙ Refresh + manual prev/next writes `day_slides` (`SLIDE_SYNC_DAY`)
+- [ ] **Push** full `slide-bridge.js` (Keynote → auto slide number on phones)
+- [ ] Verify phone Slides tab follows Keynote without manual ⚙ step
 
 **Exit criteria:** Advance Keynote on Mac; slide updates on phone within ~3s.
 
@@ -251,7 +268,8 @@ Legend: ✅ Done · 🟡 Partial · ❌ Not started
 - [x] Settings modal: editable week/day topic + date (localStorage)
 - [x] Session controls inline in presenter header (Go Live / Pause / End Day)
 - [x] Student Slides tab polish (viewport-fit, fullscreen, subtitle overlay)
-- [ ] `/presenter/setup` or expand settings: mic test, Supabase, join QR/link
+- [ ] `/presenter/setup` or expand settings: mic test, Supabase health checks
+- [x] Student join QR + link on presenter dashboard
 - [ ] Q&A pin / archive
 - [ ] Optional: pull quote button; reactions snapshot on projector
 - [ ] Day selection via URL (not only End Day advance)
@@ -343,16 +361,17 @@ Read these before building backend or running a real class.
 | 6 | **OBS Connect requires LAN** | Medium | iPad must reach `ws://MAC-IP:4455`. Presenter on Vercel URL still works for SphereNotes, but OBS buttons need Mac IP on same Wi‑Fi. |
 | 7 | **`pre-backend-design.md` stale** | Low | Still mentions Pre-Show QR, stats on projector, `slide-001.png` naming. Use **this file** instead. |
 | 8 | **Pull quotes / stats dropped** | Low | Intentional UX simplification. Display code still has `quote` mode; `stats` removed. Re-add only if you want them. |
-| 9 | **Slides: local vs live sync** | High for live slides | API + PNG loading work on dev server. **slide-bridge** still stub — manual prev/next in ⚙ settings is test-only. Keynote advance won’t update phones until bridge + Supabase. |
-| 10 | **Day 1 PNGs — committed, not deployed** | Medium | PNGs are in git (commit `922701a`). They still won’t load on phones until you **deploy to Vercel** (or use Mac IP + `npm run dev`). |
+| 9 | **Slides: Keynote vs phones** | High for live slides | **PNG loading fixed** on Vercel (flat `public/slides/`). **slide-bridge** still stub on `main` — manual ⚙ prev/next or bridge needed for Keynote auto-follow. |
+| 10 | **Deck vs teaching day** | Medium | One PNG folder for the **whole event**; `day_slides.day = 1` (`SLIDE_SYNC_DAY`) stores Keynote position only. Teaching days 1–4 are topics/Q&A/archive — not separate slide folders. |
 | 11 | **End Day in mock** | Low | Advances day in presenter localStorage only; student week archive is mock data, not tied to your live End Day click on another device. |
 | 12 | **Manual slide step vs Keynote** | Medium | ⚙ Settings slide prev/next updates session state for preview only — not wired to Keynote or student phones across devices. |
 | 13 | **Uncommitted date-picker work** | Low | `TopicEditor` date input + `lib/dates/sessionDate.ts` modified but not committed. |
 | 14 | **README vs responsive UI** | Low | README still says “resize browser to 390px”; app is full-width with bottom tabs on phone — update README when convenient. |
 | 15 | **Slides tab subtitles ≠ live speech** | Medium | Overlay shows **mock** subtitle lines from fixtures, not Mac transcription. Live tab is the intended home for real subtitles (Phase 3). |
-| 16 | **PDF ≠ slide sync** | Medium | You asked about PDF for slide test — app only serves **PNG** from `public/slides/day-N/`. Export Keynote → Images, or convert PDF → PNG sequence first. |
+| 16 | **PDF ≠ slide sync** | Medium | App only serves **PNG** from `public/slides/`. Export Keynote → Images, or convert PDF → PNG sequence first. |
 | 17 | **Fullscreen + session ticks** | Low (fixed) | Word cloud mock tick re-rendered parent every ~2.8s and exited fullscreen — fixed. Watch for similar patterns in new code. |
-| 18 | **No Supabase package yet** | High for backend | `@supabase/supabase-js` not in `package.json`; client is commented stub. Must install before Phase 1. |
+| 18 | **Supabase required** | High | No mock fallback — set keys in `.env.local` / Vercel or app shows setup screen. Run `supabase/migrations/*.sql` on your project. |
+| 20 | **QR from localhost** | Medium | Set `NEXT_PUBLIC_APP_URL` to production URL when generating join links from dev machine. |
 | 19 | **Otter / Granola not in stack** | Low (decision locked) | Personal meeting transcribers — no live push to student phones. Use in-app archive + transcript download instead. Upgrade ASR via Deepgram (§10 Step 13) if needed — not a second parallel app. |
 
 ---
@@ -408,6 +427,20 @@ Read these before building backend or running a real class.
 | **ASR upgrade path** documented — Deepgram optional after rehearsal (§10 Step 13) |
 | **Otter / Granola explicitly excluded** — not compatible with live student broadcast; use in-app archive instead |
 
+### Session 5 (2 Jun 2026 — slides + production)
+
+| Change |
+|--------|
+| **Supabase live session** on `main` (`2709d1d`) — `SupabaseSessionProvider`, migrations, join URLs, realtime Q&A |
+| **Full deck PNGs** committed — 178 files in `public/slides/` (`d3ab3f2`) |
+| **Flat slide folder** — `discoverSlides()` scans `public/slides/*.png` only; removed `day-{n}/` paths (`6c8e210`) |
+| **`GET /api/slides`** — no `?day=` param; sorts by Keynote `.NNN.png` suffix |
+| **Slide sync** — `SLIDE_SYNC_DAY` in `lib/slides/constants.ts`; `day_slides` row uses day `1` for deck position across teaching days |
+| **Presenter UI** — settings copy points to `public/slides/`; placeholder SVG updated |
+| **Vercel production** — https://sphere-notes-live.vercel.app — `/api/slides` returns 178 after deploy |
+| **Docs** — production URL table; Phase 0/1/2 progress updated |
+| **Not pushed yet** — full `slide-bridge.js` + `npm run slide-bridge` script (local only) |
+
 ---
 
 ## 10. Backend implementation checklist
@@ -430,13 +463,13 @@ Legend: **You** = your Mac / accounts · **Build** = code to write · **Test** =
 
 | # | Action | Detail |
 |---|--------|--------|
-| 1.1 | `npm install @supabase/supabase-js` | Not in package.json yet |
-| 1.2 | Uncomment / implement `lib/supabase/client.ts` | Browser client with anon key |
-| 1.3 | Create schema matching `types/realtime.ts` paths | Tables or Realtime channels for: `meta`, `slide`, `speech`, `subtitles`, `wordcloud`, `questions`, `notes`, `reactions`, `display`, `archive` under `events/{eventId}/days/{day}/` |
+| 1.1 | `npm install @supabase/supabase-js` | ✅ In `package.json` |
+| 1.2 | `lib/supabase/client.ts` | ✅ Browser client with anon key |
+| 1.3 | Run schema SQL | ✅ `supabase/migrations/001_initial_schema.sql` + `002_questions_realtime.sql` — run on your Supabase project |
 | 1.4 | Set RLS policies | Students: read session, write own votes/reactions/questions. Presenter: write meta/display/status. Service role for slide-bridge + server routes only |
 | 1.5 | Env vars | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server + slide-bridge only), `ANTHROPIC_API_KEY`, `GOOGLE_TRANSLATE_API_KEY` |
-| 1.6 | Build `SupabaseSessionProvider` | Replace `MockSessionProvider` when env vars present (`lib/session/provider.ts` already switches on env) |
-| 1.7 | Keep mock flag | `npm run dev` without keys still uses mock |
+| 1.6 | Build `SupabaseSessionProvider` | ✅ `lib/session/supabase-provider.tsx` — app requires env or setup screen |
+| 1.7 | ~~Keep mock flag~~ | **Removed** — use Supabase for all sessions |
 | **Test** | Two browsers: Go Live on iPad presenter → phone shows LIVE | Also: week/day topic edits appear on both |
 
 ### Step 2 — URL join & anonymous auth **(Build)**
@@ -445,7 +478,7 @@ Legend: **You** = your Mac / accounts · **Build** = code to write · **Test** =
 |---|--------|--------|
 | 2.1 | Wire `?event=biblical-worldview-2026&day=N` on `/student` | Subscribe to that event/day in Supabase — not presenter localStorage |
 | 2.2 | Silent **Supabase Anonymous Auth** on student load | Enables vote dedup via `voters/{uid}` |
-| 2.3 | Presenter join QR + link on `/presenter` or settings | URL shape: `{APP_URL}/student?event=…&day=N` |
+| 2.3 | Presenter join QR + link on `/presenter` | ✅ `PresenterJoinPanel` — set `NEXT_PUBLIC_APP_URL` for production QR |
 | **Test** | Phone opens link → correct day, can vote once per question |
 
 ### Step 3 — Multi-device session sync **(Build)**
@@ -456,15 +489,15 @@ Legend: **You** = your Mac / accounts · **Build** = code to write · **Test** =
 | 3.2 | `/display` reads Supabase display state | So OBS browser source matches iPad “Show on projector” even on different devices |
 | **Test** | iPad Go Live → phone LIVE badge. iPad Show question → Mac `/display` updates |
 
-### Step 4 — Slide PNGs on production **(You + Build)**
+### Step 4 — Slide PNGs on production **(You + Build)** ← **mostly done**
 
 | # | Action | Detail |
 |---|--------|--------|
-| 4.1 | Day PNGs already in git | `public/slides/day-1/*.png` (18 files) |
-| 4.2 | **Deploy to Vercel** | Push + verify build |
-| 4.3 | Export days 2–4 when ready | Same folder pattern: `public/slides/day-{n}/` |
-| 4.4 | `GET /api/slides` already works | Phones load list after deploy |
-| **Test** | Phone on cellular opens Vercel URL → Slides tab shows Day-1 PNGs after ⚙ Refresh |
+| 4.1 | Full deck in git | ✅ `public/slides/*.png` (178 files) |
+| 4.2 | **Deploy to Vercel** | ✅ sphere-notes-live.vercel.app |
+| 4.3 | Re-export Keynote when deck changes | Replace/add PNGs in **`public/slides/`** — commit + push + ⚙ Refresh |
+| 4.4 | `GET /api/slides` | ✅ Flat scan; production returns 178 |
+| **Test** | Phone on cellular → Vercel student URL → **Slides** shows real PNGs after presenter ⚙ Refresh |
 
 ### Step 5 — Keynote slide-bridge **(Build + You)**
 
@@ -472,11 +505,11 @@ Legend: **You** = your Mac / accounts · **Build** = code to write · **Test** =
 
 | # | Action | Detail |
 |---|--------|--------|
-| 5.1 | Implement `scripts/slide-bridge.js` | Currently a stub |
-| 5.2 | AppleScript poll Keynote every **2s** | Read `slide number of current slide of front document` when `playing is true` |
-| 5.3 | Write to Supabase `events/{eventId}/days/{day}/slide` | `{ current, total, updatedAt }` using **service role** key |
+| 5.1 | Implement `scripts/slide-bridge.js` | Full version **written locally** — **push to `main`** when ready |
+| 5.2 | AppleScript poll Keynote every **2s** | In local bridge script |
+| 5.3 | Write to Supabase `day_slides` | `day = SLIDE_SYNC_DAY` (1), `current` + `updated_at` via service role |
 | 5.4 | Grant Mac **Automation** permission | System Settings → Privacy → Automation: allow Terminal/Node to control Keynote |
-| 5.5 | Run before each session | `node scripts/slide-bridge.js` (env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EVENT_ID`, `DAY`) |
+| 5.5 | Run before each session | `npm run slide-bridge` (after push) — env: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `EVENT_ID` |
 | 5.6 | Student app subscribes to slide state | Already reads `slides.current` — wire to Supabase |
 | **Test** | Advance Keynote → phone slide image changes without manual ⚙ prev/next |
 

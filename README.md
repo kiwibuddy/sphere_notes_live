@@ -1,6 +1,6 @@
 # SphereNotes Live
 
-Real-time companion app for live classroom teaching. MVP runs entirely on **mock data** — no API keys required.
+Real-time companion app for live classroom teaching. Live sessions use **Supabase** (env vars required). See [source-of-truth.md](docs/source-of-truth.md) for status.
 
 **Docs (start here):**
 
@@ -14,10 +14,12 @@ npm install
 npm run dev
 ```
 
-Open:
-- **Student (phone):** [http://localhost:3000/student](http://localhost:3000/student)
-- **Presenter:** [http://localhost:3000/presenter](http://localhost:3000/presenter)
+Open (local):
+- **Student (phone):** [http://localhost:3000/student?event=biblical-worldview-2026&day=1](http://localhost:3000/student?event=biblical-worldview-2026&day=1)
+- **Presenter (iPad):** [http://localhost:3000/presenter](http://localhost:3000/presenter)
 - **OBS display:** [http://localhost:3000/display](http://localhost:3000/display)
+
+**Production (Vercel):** https://sphere-notes-live.vercel.app — same paths (`/presenter`, `/student?event=…&day=1`, `/display`). Requires Supabase env vars (see `.env.example`).
 
 ## Current topic
 
@@ -82,10 +84,10 @@ API routes (stubs ready):
 
 Bible text: `public/bible/sample-verses.json` (KJV + BSB). Expand for full offline lookup.
 
-Slides: upload PNGs to `public/slides/day-{n}/slide-001.png` etc.
+Slides: export Keynote → PNG into **`public/slides/`** (flat folder; Keynote `.001.png` names OK). Tap ⚙ **Refresh** on presenter after adding files.
 
-Deploy to **Vercel** — no secrets needed for mock MVP.
+Deploy to **Vercel** — set Supabase + `NEXT_PUBLIC_APP_URL` in project env. Production: https://sphere-notes-live.vercel.app
 
 ## Stack
 
-Next.js 14 · TypeScript · Tailwind · shadcn-style UI · Framer Motion · MockSessionProvider (→ Supabase Realtime)
+Next.js 14 · TypeScript · Tailwind · shadcn-style UI · Framer Motion · Supabase Realtime
