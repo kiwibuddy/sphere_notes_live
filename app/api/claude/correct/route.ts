@@ -1,7 +1,8 @@
+import { anthropicMessageText } from "@/lib/claude/client";
 import { sanitizeSpeechText } from "@/lib/speech/sanitize";
 import { NextResponse } from "next/server";
 
-const DEFAULT_MODEL = "claude-3-5-haiku-20241022";
+const DEFAULT_MODEL = "claude-haiku-4-5";
 
 /**
  * LIVE: Claude Haiku subtitle correction.
@@ -38,39 +39,18 @@ ${safeText}`;
 
   const model = process.env.ANTHROPIC_MODEL ?? DEFAULT_MODEL;
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
+  let corrected: string;
+  try {
+    corrected = await anthropicMessageText({
+      apiKey,
       model,
-      max_tokens: 512,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("[claude/correct]", response.status, errText);
+      maxTokens: 512,
+      userPrompt: prompt,
+    });
+  } catch (e) {
+    console.error("[claude/correct]", e);
     return NextResponse.json(
       { error: "Claude correction failed" },
-      { status: 502 }
-    );
-  }
-
-  const data = (await response.json()) as {
-    content?: { type: string; text?: string }[];
-  };
-
-  const corrected =
-    data.content?.find((c) => c.type === "text")?.text?.trim() ?? "";
-
-  if (!corrected) {
-    return NextResponse.json(
-      { error: "Empty correction response" },
       { status: 502 }
     );
   }

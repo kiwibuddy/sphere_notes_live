@@ -10,7 +10,8 @@ export function enqueueSubtitleCorrection(
   setState: (state: SubtitleWriterState) => void,
   pusher: SubtitlePusher | null,
   lineId: string,
-  rawText: string
+  rawText: string,
+  onError?: (message: string) => void
 ) {
   const trimmed = rawText.trim();
   if (trimmed.length < 4 || pending.has(lineId)) return;
@@ -23,7 +24,16 @@ export function enqueueSubtitleCorrection(
     body: JSON.stringify({ text: trimmed }),
   })
     .then(async (res) => {
-      if (!res.ok) return;
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        const message =
+          err.error ??
+          (res.status === 503
+            ? "ANTHROPIC_API_KEY not configured on the server"
+            : `Subtitle correction failed (${res.status})`);
+        onError?.(message);
+        return;
+      }
       const data = (await res.json()) as { corrected?: string };
       const corrected = data.corrected?.trim();
       if (!corrected || corrected === trimmed) return;

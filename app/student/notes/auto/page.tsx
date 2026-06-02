@@ -19,7 +19,13 @@ export default function AutoNotesPage() {
           show={!showContent}
           message="AI notes will generate when the session goes live."
         />
-        {showContent && (
+        {showContent && notes.length === 0 && (
+          <p className="text-center text-sm text-muted">
+            AI notes appear here after about a minute of teaching. Keep the Mac{" "}
+            <strong>speech bridge</strong> open with the mic enabled.
+          </p>
+        )}
+        {showContent && notes.length > 0 && (
           <div className="grid gap-4 lg:grid-cols-2">
             {notes.map((card, i) => (
               <div
