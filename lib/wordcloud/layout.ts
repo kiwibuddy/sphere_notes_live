@@ -160,9 +160,15 @@ export function drawWordCloud(
   pulseWord: string | null,
   pulsePhase: number,
   width: number,
-  height: number
+  height: number,
+  options?: { background?: string }
 ) {
-  ctx.clearRect(0, 0, width, height);
+  if (options?.background) {
+    ctx.fillStyle = options.background;
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    ctx.clearRect(0, 0, width, height);
+  }
 
   for (const item of placed) {
     const isPulsing = pulseWord === item.word;

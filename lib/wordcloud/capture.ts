@@ -18,14 +18,14 @@ export function captureWordCloudSnapshot(
   if (!ctx) return null;
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = "#F7F5F2";
-  ctx.fillRect(0, 0, width, height);
 
   const placed = layoutWordCloud(words, width, height, ctx);
-  drawWordCloud(ctx, placed, null, 0, width, height);
+  drawWordCloud(ctx, placed, null, 0, width, height, {
+    background: "#FFFFFF",
+  });
 
   try {
-    return canvas.toDataURL("image/jpeg", 0.88);
+    return canvas.toDataURL("image/png");
   } catch {
     return null;
   }
