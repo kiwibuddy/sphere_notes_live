@@ -1,3 +1,4 @@
+import { sanitizeSpeechText } from "@/lib/speech/sanitize";
 import type { SubtitleLine } from "@/types/session";
 
 export interface SubtitleWriterState {
@@ -24,7 +25,7 @@ export function applySpeechResult(
   transcript: string,
   isFinal: boolean
 ): SubtitleWriterState {
-  const trimmed = transcript.trim();
+  const trimmed = sanitizeSpeechText(transcript.trim());
   if (!trimmed) return state;
 
   let { lines, fullTranscript, currentLineId } = state;

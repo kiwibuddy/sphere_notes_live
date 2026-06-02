@@ -14,6 +14,7 @@ import { useSession } from "@/lib/session/context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
 import { SpeechRecognizer } from "@/lib/speech";
+import { sanitizeSpeechText } from "@/lib/speech/sanitize";
 import { SubtitlePusher } from "@/lib/speech/push-subtitles";
 import {
   applySpeechResult,
@@ -134,12 +135,13 @@ export function SpeechBridge() {
   }, []);
 
   const handleSpeechResult = useCallback((transcript: string, isFinal: boolean) => {
+    const safe = sanitizeSpeechText(transcript);
     writerRef.current = applySpeechResult(
       writerRef.current,
-      transcript,
+      safe,
       isFinal
     );
-    setLastPreview(transcript.trim());
+    setLastPreview(safe.trim());
     setLineCount(writerRef.current.lines.length);
     pusherRef.current?.push(writerRef.current, isFinal);
     if (isFinal) {

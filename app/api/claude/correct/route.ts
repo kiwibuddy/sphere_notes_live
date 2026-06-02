@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+/** When implemented: sanitizeSpeechText + Claude prompt to never add profanity. */
+
 /**
  * LIVE: Claude Haiku subtitle correction.
  * POST { text: string, dictionary?: string }

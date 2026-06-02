@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+/** When implemented: sanitizeSpeechText(text) before Google Translate. */
+
 /**
  * LIVE: Google Cloud Translation NMT for Live tab subtitles only.
  * POST { text: string, targetLocale: string }
