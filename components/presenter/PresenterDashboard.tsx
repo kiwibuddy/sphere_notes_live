@@ -168,6 +168,11 @@ export function PresenterDashboard() {
                 </>
               )}
 
+              <Link href="/presenter/speech" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm">
+                  Speech (Mac)
+                </Button>
+              </Link>
               <Link href={studentJoinUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm">
                   Student view

@@ -42,11 +42,7 @@ import {
   mapSubtitleLines,
   mapWordcloudJson,
 } from "@/lib/session/supabase-mappers";
-import {
-  buildSpeechPool,
-  resetWordcloudForDay,
-  seedWordcloud,
-} from "@/lib/wordcloud/simulation";
+import { resetWordcloudForDay } from "@/lib/wordcloud/simulation";
 import type { WordCloudEntry } from "@/lib/wordcloud/entries";
 import type { Json } from "@/lib/supabase/database.types";
 import type {
@@ -727,10 +723,21 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
   );
 
   const goLive = useCallback(async () => {
-    const pool = buildSpeechPool(subtitles);
-    setWordcloudEntries(seedWordcloud(pool));
+    const supabase = getSupabaseBrowserClient();
+    const day = meta.currentDay;
+    await supabase
+      .from("day_subtitles")
+      .update({
+        lines: [],
+        full_transcript: "",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("event_id", eventId)
+      .eq("day", day);
+    setSubtitles([]);
+    setWordcloudEntries(resetWordcloudForDay(day));
     await setStatus("live");
-  }, [setStatus, subtitles]);
+  }, [setStatus, eventId, meta.currentDay]);
 
   const pause = useCallback(async () => {
     await setStatus("paused");

@@ -10,6 +10,11 @@ export interface SpeechCallbacks {
   onError?: (error: string) => void;
 }
 
+export interface SpeechStartOptions {
+  /** Return true to restart recognition after Chrome stops (e.g. still live). */
+  shouldRestart?: () => boolean;
+}
+
 interface SpeechResultEvent {
   resultIndex: number;
   results: SpeechRecognitionResultList;
@@ -21,6 +26,7 @@ interface RecognitionInstance {
   lang: string;
   onresult: ((event: SpeechResultEvent) => void) | null;
   onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
   start: () => void;
   stop: () => void;
 }
@@ -29,7 +35,7 @@ export class SpeechRecognizer {
   private recognition: RecognitionInstance | null = null;
   private status: SpeechStatus = "idle";
 
-  start(callbacks: SpeechCallbacks): boolean {
+  start(callbacks: SpeechCallbacks, options?: SpeechStartOptions): boolean {
     if (typeof window === "undefined") return false;
 
     const SpeechRecognitionCtor =
@@ -55,7 +61,18 @@ export class SpeechRecognizer {
     };
 
     this.recognition.onerror = (event: { error: string }) => {
+      if (event.error === "aborted") return;
       callbacks.onError?.(event.error);
+    };
+
+    this.recognition.onend = () => {
+      if (this.status !== "listening") return;
+      if (!options?.shouldRestart?.()) return;
+      try {
+        this.recognition?.start();
+      } catch {
+        // Chrome may reject if start() races with stop()
+      }
     };
 
     this.recognition.start();
@@ -64,13 +81,13 @@ export class SpeechRecognizer {
   }
 
   pause() {
-    this.recognition?.stop();
     this.status = "paused";
+    this.recognition?.stop();
   }
 
   stop() {
-    this.recognition?.stop();
     this.status = "idle";
+    this.recognition?.stop();
   }
 
   getStatus() {
