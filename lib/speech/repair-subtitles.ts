@@ -15,20 +15,19 @@ function linesFingerprint(lines: SubtitleLine[]): string {
     .join("\n");
 }
 
+export interface SubtitleLinesRepair {
+  changed: boolean;
+  before: number;
+  after: number;
+  lines: SubtitleLine[];
+}
+
 export type SubtitleRepairResult =
-  | {
-      ok: true;
-      changed: boolean;
-      before: number;
-      after: number;
-      lines: SubtitleLine[];
-    }
+  | ({ ok: true } & SubtitleLinesRepair)
   | { ok: false; error: string };
 
 /** Collapse duplicate prefix bubbles in stored subtitle JSON. */
-export function repairSubtitleLines(
-  raw: unknown
-): Omit<SubtitleRepairResult, "ok"> & { lines: SubtitleLine[] } {
+export function repairSubtitleLines(raw: unknown): SubtitleLinesRepair {
   const parsed = parseSubtitleLines(raw);
   const coalesced = coalesceSubtitleLines(parsed);
   const changed = linesFingerprint(coalesced) !== linesFingerprint(parsed);
