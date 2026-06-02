@@ -8,7 +8,7 @@ import { MineEditor } from "@/components/notes/MineEditor";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
-const ARCHIVE_TABS = ["Live", "Q&A", "Slides", "Notes"] as const;
+const ARCHIVE_TABS = ["Live", "Q&A", "Slides", "Auto", "Mine"] as const;
 
 interface WeekArchivePanelProps {
   archive: DayArchive;
@@ -17,6 +17,7 @@ interface WeekArchivePanelProps {
 
 export function WeekArchivePanel({ archive, source }: WeekArchivePanelProps) {
   const [tab, setTab] = useState<(typeof ARCHIVE_TABS)[number]>("Live");
+  const autoNotes = [...archive.notes].reverse();
 
   // When the user switches to a different archived day, reset panel tab state.
   useEffect(() => {
@@ -72,19 +73,37 @@ export function WeekArchivePanel({ archive, source }: WeekArchivePanelProps) {
             </p>
           </div>
         )}
-        {tab === "Notes" && source === "stored" && (
-          <MineEditor day={archive.day} scope="archive" />
-        )}
-        {tab === "Notes" && source === "live" && (
-          <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-2">
-            {archive.notes.map((card, i) => (
-              <NoteCardRenderer
-                key={card.id}
-                card={card}
-                index={i}
-              />
-            ))}
+        {tab === "Auto" && (
+          <div className="mx-auto max-w-5xl">
+            {autoNotes.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted">
+                No AI notes were saved for this session.
+                {source === "live" &&
+                  " Keep the Mac speech bridge open while teaching — notes generate every ~10 minutes."}
+              </p>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-2">
+                {autoNotes.map((card, i) => (
+                  <div
+                    key={card.id}
+                    className={
+                      card.type === "quote" || card.type === "section"
+                        ? "lg:col-span-2"
+                        : undefined
+                    }
+                  >
+                    <NoteCardRenderer card={card} index={i} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        )}
+        {tab === "Mine" && (
+          <MineEditor
+            day={archive.day}
+            scope={source === "live" ? "live" : "archive"}
+          />
         )}
       </div>
     </div>
