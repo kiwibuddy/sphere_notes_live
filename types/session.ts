@@ -89,7 +89,7 @@ export interface WordCloudWord {
   word: string;
   count: number;
   category: "theology" | "names" | "concepts" | "general";
-  /** Timestamps of each occurrence — used for session vs 5 min filter */
+  /** Timestamps of each occurrence — used for Live vs Session filter */
   occurrences?: number[];
 }
 
@@ -99,7 +99,8 @@ export interface WordCloudEntry {
   occurrences: number[];
 }
 
-export type WordCloudMode = "session" | "5min";
+/** `live` = since student reset; `session` = full teaching session from Supabase */
+export type WordCloudMode = "live" | "session";
 
 export interface SlideInfo {
   current: number;

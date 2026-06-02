@@ -1,24 +1,29 @@
 import type { WordCloudEntry, WordCloudWord } from "@/types/session";
+import type { WordCloudMode } from "@/types/session";
 
 export type { WordCloudEntry };
 
-export type WordCloudMode = "session" | "5min";
+export type { WordCloudMode };
 
-const FIVE_MIN_MS = 5 * 60 * 1000;
+export interface FilterWordcloudOptions {
+  now?: number;
+  /** Only for `live` mode — occurrences at or after this timestamp (ms). */
+  liveSince?: number;
+}
 
 export function filterWordcloud(
   entries: WordCloudEntry[],
   mode: WordCloudMode,
-  now = Date.now()
+  options: FilterWordcloudOptions = {}
 ): WordCloudWord[] {
-  const cutoff = now - FIVE_MIN_MS;
+  const { now = Date.now(), liveSince } = options;
 
   return entries
     .map((entry) => {
-      const timestamps =
-        mode === "session"
-          ? entry.occurrences
-          : entry.occurrences.filter((t) => t >= cutoff);
+      let timestamps = entry.occurrences;
+      if (mode === "live" && liveSince != null) {
+        timestamps = entry.occurrences.filter((t) => t >= liveSince);
+      }
       return {
         word: entry.word,
         category: entry.category,
@@ -30,6 +35,14 @@ export function filterWordcloud(
     .sort((a, b) => b.count - a.count);
 }
 
-export function entryCount(entries: WordCloudEntry[], mode: WordCloudMode): number {
-  return filterWordcloud(entries, mode).length;
+export function entryCount(
+  entries: WordCloudEntry[],
+  mode: WordCloudMode,
+  options: FilterWordcloudOptions = {}
+): number {
+  return filterWordcloud(entries, mode, options).length;
+}
+
+export function liveResetStorageKey(eventId: string): string {
+  return `spherenotes-wordcloud-live-${eventId}`;
 }

@@ -4,63 +4,99 @@ import { WaitingOverlay } from "@/components/layout/SessionHeader";
 import { WordCloudCanvas } from "@/components/notes/WordCloudCanvas";
 import { useSendToMine } from "@/hooks/useSendToMine";
 import { useSession } from "@/lib/session/context";
-import { entryCount, filterWordcloud } from "@/lib/wordcloud/entries";
+import {
+  entryCount,
+  filterWordcloud,
+  liveResetStorageKey,
+} from "@/lib/wordcloud/entries";
 import type { WordCloudMode } from "@/types/session";
 import { cn } from "@/lib/utils";
-import { useEffect, useMemo, useState } from "react";
+import { RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function CloudNotesPage() {
-  const { wordcloudEntries, meta, isTabLiveActive } = useSession();
+  const { wordcloudEntries, meta, isTabLiveActive, joinEventId } = useSession();
   const sendToMine = useSendToMine();
-  const [mode, setMode] = useState<WordCloudMode>("session");
-  const [tick, setTick] = useState(0);
+  const [mode, setMode] = useState<WordCloudMode>("live");
+  const [liveSince, setLiveSince] = useState(() => Date.now());
   const isLive = isTabLiveActive("notes");
   const showContent = isLive || meta.status === "paused";
 
-  // Re-filter 5 min window as time passes
+  const storageKey = liveResetStorageKey(joinEventId);
+
   useEffect(() => {
-    if (mode !== "5min" || meta.status !== "live") return;
-    const id = setInterval(() => setTick((t) => t + 1), 15_000);
-    return () => clearInterval(id);
-  }, [mode, meta.status]);
+    const stored = localStorage.getItem(storageKey);
+    if (!stored) return;
+    const parsed = parseInt(stored, 10);
+    if (!Number.isNaN(parsed)) setLiveSince(parsed);
+  }, [storageKey]);
+
+  const resetLiveView = useCallback(() => {
+    const now = Date.now();
+    setLiveSince(now);
+    localStorage.setItem(storageKey, String(now));
+  }, [storageKey]);
+
+  const filterOptions = useMemo(
+    () => (mode === "live" ? { liveSince } : {}),
+    [mode, liveSince]
+  );
 
   const filtered = useMemo(
-    () => filterWordcloud(wordcloudEntries, mode, Date.now()),
-    // tick forces 5 min window to refresh as time passes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [wordcloudEntries, mode, tick]
+    () => filterWordcloud(wordcloudEntries, mode, filterOptions),
+    [wordcloudEntries, mode, filterOptions]
   );
 
   const wordCount = useMemo(
-    () => entryCount(wordcloudEntries, mode),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [wordcloudEntries, mode, tick]
+    () => entryCount(wordcloudEntries, mode, filterOptions),
+    [wordcloudEntries, mode, filterOptions]
   );
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2 md:px-6">
-        <div className="flex rounded-lg bg-background p-0.5">
-          {(["session", "5min"] as const).map((m) => (
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 md:px-6">
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-lg bg-background p-0.5">
+            {(
+              [
+                { id: "live" as const, label: "Live" },
+                { id: "session" as const, label: "Session" },
+              ] as const
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMode(id)}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-xs font-medium md:text-sm",
+                  mode === id
+                    ? "bg-surface text-foreground shadow-sm"
+                    : "text-muted hover:text-foreground"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode === "live" && showContent && (
             <button
-              key={m}
               type="button"
-              onClick={() => setMode(m)}
-              className={cn(
-                "rounded-md px-3 py-1.5 text-xs font-medium md:text-sm",
-                mode === m
-                  ? "bg-surface text-foreground shadow-sm"
-                  : "text-muted hover:text-foreground"
-              )}
+              onClick={resetLiveView}
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted shadow-sm transition-colors hover:text-foreground"
+              title="Clear Live view and show only new words from here"
             >
-              {m === "session" ? "Session" : "5 min"}
+              <RotateCcw className="h-3 w-3" aria-hidden />
+              Reset
             </button>
-          ))}
+          )}
         </div>
         <span className="text-xs text-muted md:text-sm">
           {wordCount} word{wordCount !== 1 ? "s" : ""}
-          {meta.status === "live" && (
+          {meta.status === "live" && mode === "live" && (
             <span className="ml-2 text-live-active">· growing live</span>
+          )}
+          {mode === "session" && meta.status === "live" && (
+            <span className="ml-2 text-muted">· full session</span>
           )}
         </span>
       </div>
@@ -75,7 +111,12 @@ export default function CloudNotesPage() {
             words={filtered}
             mode={mode}
             onSendToMine={({ text, imageData }) =>
-              sendToMine(text, "cloud", "Word Cloud", { imageData })
+              sendToMine(
+                text,
+                "cloud",
+                mode === "live" ? "Word Cloud (Live)" : "Word Cloud (Session)",
+                { imageData }
+              )
             }
           />
         )}
