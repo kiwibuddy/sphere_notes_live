@@ -27,8 +27,9 @@ export function StudentContent({
       className={cn(
         "mx-auto w-full px-4 py-4 md:px-6 md:py-6 lg:px-8",
         WIDTH[width],
-        scroll && "flex-1 overflow-y-auto",
-        !scroll && "flex flex-1 flex-col",
+        scroll &&
+          "min-h-0 flex-1 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] scroll-pb-6",
+        !scroll && "flex min-h-0 flex-1 flex-col overflow-hidden",
         className
       )}
     >
