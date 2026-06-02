@@ -146,9 +146,11 @@ export interface SessionContextValue {
   meta: SessionMeta;
   dayInfo: Record<number, DayInfo>;
   getDayInfo: (day: number) => DayInfo;
+  /** Current live session title + date (presenter settings). */
+  getSessionInfo: () => DayInfo;
   setEventTitle: (title: string) => void;
-  setDayTopic: (day: number, topic: string) => void;
-  setDayDate: (day: number, date: string) => void;
+  setSessionTopic: (topic: string) => void;
+  setSessionDate: (date: string) => void;
   subtitles: SubtitleLine[];
   questions: Question[];
   notes: NoteCard[];
@@ -166,7 +168,6 @@ export interface SessionContextValue {
   pause: () => void;
   resume: () => void;
   endDay: () => void;
-  setDay: (day: number) => void;
   isTabLiveActive: (tab: "live" | "slides" | "notes" | "qa") => boolean;
   voteQuestion: (id: string) => void;
   submitQuestion: (text: string) => void;
@@ -174,7 +175,7 @@ export interface SessionContextValue {
   setDisplay: (mode: DisplayMode, payload?: DisplayPayload) => void;
   addClipping: (clipping: Omit<Clipping, "id" | "createdAt">) => void;
   clippings: Clipping[];
-  /** Day this client is subscribed to (URL on student, current_day on presenter). */
+  /** Internal live bucket (always 1) — use getSessionInfo() for labels. */
   activeDay: number;
   /** Event id from join URL or config. */
   joinEventId: string;

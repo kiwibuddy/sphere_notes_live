@@ -5,37 +5,22 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/session/session-context";
 import { buildStudentJoinQuery, isStudentRoute } from "@/lib/session/join-url";
 
-/**
- * Ensures /student/* URLs always include ?event=&day= (Step 2 join contract).
- */
+/** Ensures /student/* URLs include ?event= (no day number). */
 export function StudentJoinRedirect() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { sessionReady, joinEventId, activeDay, meta } = useSession();
+  const { sessionReady, joinEventId } = useSession();
 
   useEffect(() => {
     if (!isStudentRoute(pathname) || !sessionReady) return;
 
     const event = searchParams.get("event");
-    const day = searchParams.get("day");
+    if (event) return;
 
-    if (event && day) {
-      if (event !== joinEventId) return;
-      return;
-    }
-
-    const query = buildStudentJoinQuery(joinEventId, activeDay);
+    const query = buildStudentJoinQuery(joinEventId);
     router.replace(`${pathname}${query}`);
-  }, [
-    pathname,
-    searchParams,
-    router,
-    sessionReady,
-    joinEventId,
-    activeDay,
-    meta.eventId,
-  ]);
+  }, [pathname, searchParams, router, sessionReady, joinEventId]);
 
   return null;
 }

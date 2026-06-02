@@ -20,8 +20,8 @@ import {
   getConfigEventId,
   isPresenterRoute,
   isStudentRoute,
-  parseJoinDay,
 } from "@/lib/session/join-url";
+import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { placeholderSlides } from "@/lib/slides/placeholder";
 import { SLIDE_SYNC_DAY } from "@/lib/slides/constants";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -114,7 +114,6 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const urlEvent = searchParams.get("event");
-  const urlDayRaw = searchParams.get("day");
   const eventId = getResolvedEventId(pathname, urlEvent);
   const isStudent = isStudentRoute(pathname);
   const isPresenter = isPresenterRoute(pathname);
@@ -161,20 +160,20 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     setReady(true);
   }, []);
 
-  const activeDay = useMemo(() => {
-    if (isStudent) {
-      return parseJoinDay(urlDayRaw, meta.totalDays, meta.currentDay);
-    }
-    return meta.currentDay;
-  }, [isStudent, urlDayRaw, meta.totalDays, meta.currentDay]);
+  const activeDay = LIVE_SYNC_DAY;
 
   const studentJoinUrl = useMemo(
-    () => buildStudentJoinUrl(eventId, isPresenter ? meta.currentDay : activeDay),
-    [eventId, isPresenter, meta.currentDay, activeDay]
+    () => buildStudentJoinUrl(eventId),
+    [eventId]
   );
 
   const getDayInfo = useCallback(
     (d: number): DayInfo => dayInfo[d] ?? defaultDayInfo[d],
+    [dayInfo]
+  );
+
+  const getSessionInfo = useCallback(
+    (): DayInfo => dayInfo[LIVE_SYNC_DAY] ?? defaultDayInfo[LIVE_SYNC_DAY],
     [dayInfo]
   );
 
@@ -242,14 +241,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
         const event = eventResult.data;
         if (event) setMeta(mapEventRow(event));
 
-        const fetchDay = isStudent
-          ? parseJoinDay(
-              urlDayRaw,
-              event?.total_days ?? defaultMeta.totalDays,
-              event?.current_day ?? defaultMeta.currentDay
-            )
-          : event?.current_day ?? defaultMeta.currentDay;
-
+        const fetchDay = LIVE_SYNC_DAY;
         const eventTitle = event?.title ?? defaultMeta.title;
 
         markReady();
@@ -416,7 +408,7 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [eventId, urlDayRaw, isStudent, markReady, reloadToken]);
+  }, [eventId, markReady, reloadToken]);
 
   useEffect(() => {
     saveClippings(clippings);
@@ -660,42 +652,42 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     [eventId]
   );
 
-  const setDayTopic = useCallback(
-    async (targetDay: number, topic: string) => {
+  const setSessionTopic = useCallback(
+    async (topic: string) => {
       const trimmed = topic.trim();
       setDayInfo((prev) => ({
         ...prev,
-        [targetDay]: {
-          ...(prev[targetDay] ?? defaultDayInfo[targetDay]),
-          topic: trimmed || (prev[targetDay]?.topic ?? `Day ${targetDay}`),
+        [LIVE_SYNC_DAY]: {
+          ...(prev[LIVE_SYNC_DAY] ?? defaultDayInfo[LIVE_SYNC_DAY]),
+          topic: trimmed || prev[LIVE_SYNC_DAY]?.topic || "Session",
         },
       }));
       const supabase = getSupabaseBrowserClient();
       await supabase.from("day_meta").upsert({
         event_id: eventId,
-        day: targetDay,
+        day: LIVE_SYNC_DAY,
         topic: trimmed,
-        date: dayInfo[targetDay]?.date ?? "",
+        date: dayInfo[LIVE_SYNC_DAY]?.date ?? "",
       });
     },
     [eventId, dayInfo]
   );
 
-  const setDayDate = useCallback(
-    async (targetDay: number, date: string) => {
+  const setSessionDate = useCallback(
+    async (date: string) => {
       const trimmed = date.trim();
       setDayInfo((prev) => ({
         ...prev,
-        [targetDay]: {
-          ...(prev[targetDay] ?? defaultDayInfo[targetDay]),
-          date: trimmed || prev[targetDay]?.date || "",
+        [LIVE_SYNC_DAY]: {
+          ...(prev[LIVE_SYNC_DAY] ?? defaultDayInfo[LIVE_SYNC_DAY]),
+          date: trimmed || prev[LIVE_SYNC_DAY]?.date || "",
         },
       }));
       const supabase = getSupabaseBrowserClient();
       await supabase.from("day_meta").upsert({
         event_id: eventId,
-        day: targetDay,
-        topic: dayInfo[targetDay]?.topic ?? `Day ${targetDay}`,
+        day: LIVE_SYNC_DAY,
+        topic: dayInfo[LIVE_SYNC_DAY]?.topic ?? "Session",
         date: trimmed,
       });
     },
@@ -724,7 +716,6 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
 
   const goLive = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    const day = meta.currentDay;
     await supabase
       .from("day_subtitles")
       .update({
@@ -733,11 +724,11 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
         updated_at: new Date().toISOString(),
       })
       .eq("event_id", eventId)
-      .eq("day", day);
+      .eq("day", LIVE_SYNC_DAY);
     setSubtitles([]);
-    setWordcloudEntries(resetWordcloudForDay(day));
+    setWordcloudEntries(resetWordcloudForDay(LIVE_SYNC_DAY));
     await setStatus("live");
-  }, [setStatus, eventId, meta.currentDay]);
+  }, [setStatus, eventId]);
 
   const pause = useCallback(async () => {
     await setStatus("paused");
@@ -749,16 +740,22 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
 
   const endDay = useCallback(async () => {
     const supabase = getSupabaseBrowserClient();
-    const archivingDay = meta.currentDay;
-    const info = dayInfo[archivingDay] ?? defaultDayInfo[archivingDay];
+    const info = getSessionInfo();
+
+    const { data: archiveRows } = await supabase
+      .from("day_archives")
+      .select("day")
+      .eq("event_id", eventId);
+    const archiveSlot =
+      Math.max(0, ...(archiveRows?.map((r) => r.day) ?? [])) + 1;
 
     await supabase.from("day_archives").upsert({
       event_id: eventId,
-      day: archivingDay,
+      day: archiveSlot,
       archived_at: new Date().toISOString(),
       snapshot: {
-        label: info?.topic ?? `Day ${archivingDay}`,
-        date: info?.date ?? "",
+        label: info.topic.trim() || "Session",
+        date: info.date ?? "",
         subtitles,
         questions,
         notes,
@@ -772,30 +769,26 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       } as unknown as Json,
     });
 
-    const nextDay = Math.min(meta.currentDay + 1, meta.totalDays);
-    const newDay = nextDay === meta.currentDay ? meta.currentDay : nextDay;
     await supabase
       .from("events")
       .update({
         status: "waiting",
-        current_day: newDay,
+        current_day: LIVE_SYNC_DAY,
         updated_at: new Date().toISOString(),
       })
       .eq("id", eventId);
     setMeta((m) => ({
       ...m,
       status: "waiting",
-      currentDay: newDay,
+      currentDay: LIVE_SYNC_DAY,
     }));
-    setWordcloudEntries(resetWordcloudForDay(newDay));
+    setWordcloudEntries(resetWordcloudForDay(LIVE_SYNC_DAY));
     setSubtitles([]);
     setNotes([]);
     setSessionMap([]);
   }, [
     eventId,
-    meta.currentDay,
-    meta.totalDays,
-    dayInfo,
+    getSessionInfo,
     subtitles,
     questions,
     notes,
@@ -803,24 +796,6 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     wordcloudEntries,
     sessionMap,
   ]);
-
-  const setDay = useCallback(
-    async (newDay: number) => {
-      const safe = Math.max(1, Math.min(newDay, meta.totalDays));
-      const supabase = getSupabaseBrowserClient();
-      await supabase
-        .from("events")
-        .update({
-          current_day: safe,
-          status: "waiting",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", eventId);
-      setMeta((m) => ({ ...m, currentDay: safe, status: "waiting" }));
-      setWordcloudEntries(resetWordcloudForDay(safe));
-    },
-    [eventId, meta.totalDays]
-  );
 
   const isTabLiveActive = useCallback(
     (tab: "live" | "slides" | "notes" | "qa") => {
@@ -937,9 +912,9 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
           updated_at: new Date().toISOString(),
         })
         .eq("event_id", eventId)
-        .eq("day", meta.currentDay);
+        .eq("day", LIVE_SYNC_DAY);
     },
-    [displayQuote, displayQuestion, eventId, meta.currentDay]
+    [displayQuote, displayQuestion, eventId]
   );
 
   const addClipping = useCallback(
@@ -960,9 +935,10 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     meta,
     dayInfo,
     getDayInfo,
+    getSessionInfo,
     setEventTitle,
-    setDayTopic,
-    setDayDate,
+    setSessionTopic,
+    setSessionDate,
     subtitles,
     questions,
     notes,
@@ -980,7 +956,6 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
     pause,
     resume,
     endDay,
-    setDay,
     isTabLiveActive,
     voteQuestion,
     submitQuestion,

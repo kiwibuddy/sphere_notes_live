@@ -12,10 +12,10 @@ export function DisplayView() {
     displayQuestion,
     wordcloudEntries,
     meta,
-    getDayInfo,
+    getSessionInfo,
   } = useSession();
 
-  const dayInfo = getDayInfo(meta.currentDay);
+  const session = getSessionInfo();
 
   const wordcloud = useMemo(
     () => filterWordcloud(wordcloudEntries, "session"),
@@ -28,7 +28,7 @@ export function DisplayView() {
         <div className="text-center">
           <p className="font-display text-4xl text-foreground">{meta.title}</p>
           <p className="mt-3 text-xl text-muted">
-            {dayInfo.topic} · {dayInfo.date}
+            {session.topic} · {session.date}
           </p>
           <p className="mt-4 text-sm text-muted">SphereNotes Live · Display</p>
         </div>

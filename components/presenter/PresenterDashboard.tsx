@@ -46,7 +46,7 @@ export function PresenterDashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const {
     meta,
-    getDayInfo,
+    getSessionInfo,
     goLive,
     pause,
     resume,
@@ -59,7 +59,7 @@ export function PresenterDashboard() {
     studentJoinUrl,
   } = useSession();
 
-  const dayInfo = getDayInfo(meta.currentDay);
+  const session = getSessionInfo();
   const sortedQuestions = sortQuestionsByVotes(questions);
 
   const topQuestion = sortedQuestions[0];
@@ -86,7 +86,7 @@ export function PresenterDashboard() {
                 {meta.title}
               </h1>
               <p className="mt-1 text-sm text-muted md:text-base">
-                {formatSessionHeader(dayInfo, meta.currentDay)}
+                {formatSessionHeader(session)}
               </p>
               <p className="mt-2 text-xs text-muted">
                 Slide {slides.current} of {slides.total}

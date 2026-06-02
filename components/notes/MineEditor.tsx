@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession } from "@/lib/session/context";
+import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { useMineNotes } from "@/hooks/useMineNotes";
 import { NotesFormatToolbar } from "@/components/notes/NotesFormatToolbar";
 import { ClippingBlock } from "@/components/notes/ClippingBlock";
@@ -10,7 +11,7 @@ import { useCallback, useEffect, useRef } from "react";
 export function MineEditor() {
   const { meta } = useSession();
   const { content, clippings, lastSaved, updateContent, removeClipping } =
-    useMineNotes(meta.currentDay);
+    useMineNotes(LIVE_SYNC_DAY);
   const editorRef = useRef<HTMLDivElement>(null);
   const skipSync = useRef(false);
 
@@ -23,7 +24,7 @@ export function MineEditor() {
     if (editor && editor.innerHTML !== content) {
       editor.innerHTML = content || "";
     }
-  }, [content, meta.currentDay]);
+  }, [content]);
 
   const persistEditor = useCallback(() => {
     const html = editorRef.current?.innerHTML ?? "";

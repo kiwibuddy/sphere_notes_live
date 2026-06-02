@@ -2,7 +2,6 @@
 
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TeachingDayPicker } from "@/components/presenter/TeachingDayPicker";
 import { useSession } from "@/lib/session/context";
 import {
   isoToSessionDateDisplay,
@@ -163,9 +162,9 @@ function SessionDateField({
 }
 
 export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
-  const { meta, getDayInfo, setEventTitle, setDayTopic, setDayDate } =
+  const { meta, getSessionInfo, setEventTitle, setSessionTopic, setSessionDate } =
     useSession();
-  const day = getDayInfo(meta.currentDay);
+  const session = getSessionInfo();
 
   const content = (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -176,15 +175,15 @@ export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
         placeholder="e.g. Biblical Worldview"
       />
       <EditableField
-        label={`Topic for day ${meta.currentDay}`}
-        value={day.topic}
-        onSave={(topic) => setDayTopic(meta.currentDay, topic)}
-        placeholder="e.g. Creation & Fall"
+        label="Session title"
+        value={session.topic}
+        onSave={setSessionTopic}
+        placeholder="e.g. Introduction"
       />
       <SessionDateField
         label="Date"
-        value={day.date}
-        onSave={(date) => setDayDate(meta.currentDay, date)}
+        value={session.date}
+        onSave={setSessionDate}
         className="sm:col-span-2"
       />
     </div>
@@ -193,13 +192,12 @@ export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
   if (embedded) {
     return (
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Session topics</h3>
+        <h3 className="text-sm font-semibold text-foreground">This session</h3>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          Week and day titles sync to student phones, display screen, and week
-          archive.
+          Title and date sync to student phones, the Mac speech tab, and display.
+          Change these when you start a new session (e.g. after End Day).
         </p>
         <div className="mt-4">{content}</div>
-        <TeachingDayPicker />
       </div>
     );
   }
@@ -207,10 +205,10 @@ export function TopicEditor({ embedded = false }: { embedded?: boolean }) {
   return (
     <section className="mb-6 rounded-xl border border-border bg-surface p-4 shadow-card md:p-5">
       <div className="mb-4">
-        <h2 className="text-sm font-semibold text-foreground">Session topics</h2>
+        <h2 className="text-sm font-semibold text-foreground">This session</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted">
-          Week and day titles sync to student phones, display screen, and week
-          archive. Update these at the start of each teaching day.
+          Set the session title students see (e.g. Introduction). Everyone on the
+          same event link stays in sync — no day numbers.
         </p>
       </div>
       {content}

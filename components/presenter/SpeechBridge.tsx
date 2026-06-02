@@ -9,6 +9,7 @@ import {
   formatSessionDateLine,
   formatSessionTitle,
 } from "@/lib/session/day-label";
+import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import { useSession } from "@/lib/session/context";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mapSubtitleLines } from "@/lib/session/supabase-mappers";
@@ -42,10 +43,9 @@ function statusLabel(status: SessionStatus): string {
 export function SpeechBridge() {
   const {
     meta,
-    activeDay,
     joinEventId,
     sessionReady,
-    getDayInfo,
+    getSessionInfo,
   } = useSession();
 
   const [authOk, setAuthOk] = useState(false);
@@ -73,7 +73,7 @@ export function SpeechBridge() {
       .from("day_subtitles")
       .select("lines, full_transcript")
       .eq("event_id", joinEventId)
-      .eq("day", activeDay)
+      .eq("day", LIVE_SYNC_DAY)
       .maybeSingle();
 
     if (error) {
@@ -89,7 +89,7 @@ export function SpeechBridge() {
     setLineCount(lines.length);
     const current = lines.find((l) => l.isCurrent);
     setLastPreview(current?.textEn ?? lines.at(-1)?.textEn ?? "");
-  }, [joinEventId, activeDay]);
+  }, [joinEventId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,14 +118,14 @@ export function SpeechBridge() {
     pusherRef.current?.dispose();
     pusherRef.current = new SubtitlePusher(
       joinEventId,
-      () => activeDay,
+      () => LIVE_SYNC_DAY,
       (msg) => setPushError(msg)
     );
     void loadSubtitlesFromDb();
     return () => {
       pusherRef.current?.dispose();
     };
-  }, [joinEventId, activeDay, loadSubtitlesFromDb]);
+  }, [joinEventId, loadSubtitlesFromDb]);
 
   const stopRecognizer = useCallback(() => {
     recognizerRef.current?.stop();
@@ -199,7 +199,7 @@ export function SpeechBridge() {
     setSpeechError(null);
   }, []);
 
-  const dayInfo = getDayInfo(activeDay);
+  const session = getSessionInfo();
 
   if (!sessionReady) {
     return <SessionConnectionScreen message="Connecting to session…" />;
@@ -223,11 +223,11 @@ export function SpeechBridge() {
           </p>
           <h1 className="font-display text-2xl text-foreground">{meta.title}</h1>
           <p className="mt-2 font-display text-xl text-foreground">
-            {formatSessionTitle(dayInfo, activeDay)}
+            {formatSessionTitle(session)}
           </p>
-          {formatSessionDateLine(dayInfo) && (
+          {formatSessionDateLine(session) && (
             <p className="mt-1 text-sm text-muted">
-              {formatSessionDateLine(dayInfo)}
+              {formatSessionDateLine(session)}
             </p>
           )}
           <p className="mt-3 text-xs text-muted">

@@ -14,36 +14,28 @@ export function getAppOrigin(): string {
   return "";
 }
 
-export function buildStudentJoinUrl(
-  eventId: string,
-  day: number,
-  origin?: string
-): string {
+/** Student join — event only; live data is not split by day number. */
+export function buildStudentJoinUrl(eventId: string, origin?: string): string {
   const base = (origin ?? getAppOrigin()).replace(/\/$/, "");
-  const params = new URLSearchParams({
-    event: eventId,
-    day: String(day),
-  });
+  const params = new URLSearchParams({ event: eventId });
   return `${base}/student?${params.toString()}`;
 }
 
-export function buildStudentJoinQuery(eventId: string, day: number): string {
-  const params = new URLSearchParams({
-    event: eventId,
-    day: String(day),
-  });
+export function buildStudentJoinQuery(eventId: string): string {
+  const params = new URLSearchParams({ event: eventId });
   return `?${params.toString()}`;
 }
 
+/** @deprecated Legacy URLs may include day= — ignored for sync. */
 export function parseJoinDay(
   raw: string | null,
-  totalDays: number,
+  _totalDays: number,
   fallback: number
 ): number {
   if (!raw) return fallback;
   const n = parseInt(raw, 10);
   if (Number.isNaN(n) || n < 1) return fallback;
-  return Math.min(n, totalDays);
+  return n;
 }
 
 export function isStudentRoute(pathname: string): boolean {

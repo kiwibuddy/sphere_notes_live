@@ -1,4 +1,5 @@
 import type { DayArchive, DayInfo, SessionMeta } from "@/types/session";
+import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 
 export const EVENT_ID = "biblical-worldview-2026";
 
@@ -12,7 +13,7 @@ export const defaultMeta: SessionMeta = {
 };
 
 export const defaultDayInfo: Record<number, DayInfo> = {
-  1: { topic: "The Kingdom Blueprint", date: "" },
+  1: { topic: "Introduction", date: "" },
   2: { topic: "Day 2", date: "" },
   3: { topic: "Day 3", date: "" },
   4: { topic: "Day 4", date: "" },
@@ -20,9 +21,9 @@ export const defaultDayInfo: Record<number, DayInfo> = {
 
 export function getDayStatus(
   day: number,
-  currentDay: number
+  _currentDay: number
 ): DayArchive["status"] {
-  if (day < currentDay) return "archived";
-  if (day === currentDay) return "today";
+  if (day === LIVE_SYNC_DAY) return "today";
+  if (day < LIVE_SYNC_DAY) return "archived";
   return "upcoming";
 }

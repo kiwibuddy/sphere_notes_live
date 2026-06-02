@@ -1,7 +1,7 @@
 "use client";
 
-import { useSession } from "@/lib/session/context";
 import { useMineNotes } from "@/hooks/useMineNotes";
+import { LIVE_SYNC_DAY } from "@/lib/session/live-sync";
 import type { ClippingSource } from "@/types/session";
 
 export interface SendToMineOptions {
@@ -9,8 +9,7 @@ export interface SendToMineOptions {
 }
 
 export function useSendToMine() {
-  const { meta } = useSession();
-  const { addClipping } = useMineNotes(meta.currentDay);
+  const { addClipping } = useMineNotes(LIVE_SYNC_DAY);
 
   return (
     text: string,

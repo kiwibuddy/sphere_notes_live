@@ -4,23 +4,20 @@ import { useCallback, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/session/context";
-import {
-  formatInternalDaySlot,
-  formatSessionTitle,
-} from "@/lib/session/day-label";
+import { formatSessionTitle } from "@/lib/session/day-label";
 import { buildStudentJoinUrl } from "@/lib/session/join-url";
 import { Copy, Check, Link2 } from "lucide-react";
 
 export function PresenterJoinPanel() {
-  const { joinEventId, activeDay, getDayInfo, meta } = useSession();
+  const { joinEventId, getSessionInfo } = useSession();
   const [copied, setCopied] = useState(false);
 
   const joinUrl = useMemo(
-    () => buildStudentJoinUrl(joinEventId, activeDay),
-    [joinEventId, activeDay]
+    () => buildStudentJoinUrl(joinEventId),
+    [joinEventId]
   );
 
-  const dayInfo = getDayInfo(activeDay);
+  const session = getSessionInfo();
 
   const copyLink = useCallback(async () => {
     try {
@@ -42,10 +39,9 @@ export function PresenterJoinPanel() {
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             Students scan the QR or open the link on their phones — same Wi‑Fi
-            or your deployed URL. Session:{" "}
-            <strong>{formatSessionTitle(dayInfo, activeDay)}</strong>.{" "}
-            {formatInternalDaySlot(activeDay, meta.totalDays)} — phones must use
-            this link so Live subtitles match the Mac speech tab.
+            or your deployed URL. Current session:{" "}
+            <strong>{formatSessionTitle(session)}</strong>. Mac speech tab and
+            student Live subtitles stay in sync automatically.
           </p>
         </div>
       </div>
