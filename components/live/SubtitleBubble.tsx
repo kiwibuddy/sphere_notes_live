@@ -108,8 +108,13 @@ export function SubtitleBubble({
 
           {isLive && <TypingIndicator />}
 
-          {isLive && !readOnly && onSendToMine && (
-            <div className="mt-3 border-t border-border/60 pt-2">
+          {!readOnly && onSendToMine && (
+            <div
+              className={cn(
+                "mt-3 border-t pt-2",
+                isLive ? "border-border/60" : "border-border/50"
+              )}
+            >
               <SendToMineButton onSend={() => onSendToMine(text)} />
             </div>
           )}
