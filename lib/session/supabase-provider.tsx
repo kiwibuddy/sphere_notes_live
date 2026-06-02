@@ -26,7 +26,7 @@ import { placeholderSlides } from "@/lib/slides/placeholder";
 import { SLIDE_SYNC_DAY } from "@/lib/slides/constants";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { ensureSupabaseAuth } from "@/lib/session/ensure-auth";
-import { withTimeout, TimeoutError } from "@/lib/session/with-timeout";
+import { withRetry, withTimeout, TimeoutError, SUPABASE_WAKE_HINT } from "@/lib/session/with-timeout";
 import { SessionConnectionScreen } from "@/components/setup/SessionConnectionScreen";
 import {
   clearQuestionsForDay,
@@ -71,6 +71,8 @@ import type {
 } from "@/types/session";
 
 const STORAGE_KEY = "spherenotes-clippings";
+const SUPABASE_CONNECT_TIMEOUT_MS = 25_000;
+const SUPABASE_CONNECT_ATTEMPTS = 3;
 
 function loadClippings(): Clipping[] {
   if (typeof window === "undefined") return [];
@@ -232,12 +234,23 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
       markReady();
     };
 
+    const formatLoadError = (err: unknown): string => {
+      if (err instanceof TimeoutError) {
+        return `${err.message} ${SUPABASE_WAKE_HINT}`;
+      }
+      if (err instanceof Error) return err.message;
+      return "Unknown connection error";
+    };
+
     async function run() {
       try {
-        const eventResult = await withTimeout(
-          supabase.from("events").select("*").eq("id", eventId).single(),
-          12_000,
-          "Could not reach Supabase"
+        const eventResult = await withRetry(
+          () => supabase.from("events").select("*").eq("id", eventId).single(),
+          {
+            attempts: SUPABASE_CONNECT_ATTEMPTS,
+            timeoutMs: SUPABASE_CONNECT_TIMEOUT_MS,
+            label: "Could not reach Supabase",
+          }
         );
         if (cancelled) return;
 
@@ -276,72 +289,76 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
             console.warn("[session] auth skipped or timed out", err);
           });
 
-        const critical = await withTimeout(
-          Promise.all([
-            supabase.from("day_meta").select("*").eq("event_id", eventId),
-            supabase
-              .from("day_display")
-              .select("*")
-              .eq("event_id", eventId)
-              .eq("day", fetchDay)
-              .maybeSingle(),
-            supabase
-              .from("day_slides")
-              .select("current,total")
-              .eq("event_id", eventId)
-              .eq("day", SLIDE_SYNC_DAY)
-              .maybeSingle(),
-            supabase
-              .from("day_reactions")
-              .select("*")
-              .eq("event_id", eventId)
-              .eq("day", fetchDay)
-              .maybeSingle(),
-          ]),
-          12_000,
-          "Loading session data"
-        );
-        if (cancelled) return;
+        try {
+          const critical = await withTimeout(
+            Promise.all([
+              supabase.from("day_meta").select("*").eq("event_id", eventId),
+              supabase
+                .from("day_display")
+                .select("*")
+                .eq("event_id", eventId)
+                .eq("day", fetchDay)
+                .maybeSingle(),
+              supabase
+                .from("day_slides")
+                .select("current,total")
+                .eq("event_id", eventId)
+                .eq("day", SLIDE_SYNC_DAY)
+                .maybeSingle(),
+              supabase
+                .from("day_reactions")
+                .select("*")
+                .eq("event_id", eventId)
+                .eq("day", fetchDay)
+                .maybeSingle(),
+            ]),
+            20_000,
+            "Loading session data"
+          );
+          if (cancelled) return;
 
-        const [
-          { data: metaRows },
-          { data: displayRow },
-          { data: slideRow },
-          { data: reactionRow },
-        ] = critical;
+          const [
+            { data: metaRows },
+            { data: displayRow },
+            { data: slideRow },
+            { data: reactionRow },
+          ] = critical;
 
-        if (metaRows?.length) {
-          setDayInfo({ ...defaultDayInfo, ...mapDayMetaRows(metaRows) });
-        }
-
-        if (displayRow) {
-          const d = displayModeFromRow(displayRow);
-          setDisplayModeState(d.mode);
-          setDisplayQuote(d.quote);
-          setDisplayQuestion(d.question);
-        }
-
-        if (reactionRow) setReactions(mapReactionsRow(reactionRow));
-
-        const slideCurrent = slideRow?.current ?? 1;
-        if (slideRow?.total) {
-          setSlides((prev) => ({
-            ...prev,
-            current: Math.min(slideCurrent, slideRow.total),
-            total: slideRow.total,
-          }));
-        }
-
-        void fetchSlidesDeck(eventTitle, slideCurrent).then(
-          (slideInfo) => {
-            if (cancelled) return;
-            if (slideRow?.total) {
-              slideInfo.total = slideRow.total;
-              slideInfo.current = Math.min(slideCurrent, slideRow.total);
-            }
-            setSlides(slideInfo);
+          if (metaRows?.length) {
+            setDayInfo({ ...defaultDayInfo, ...mapDayMetaRows(metaRows) });
           }
-        );
+
+          if (displayRow) {
+            const d = displayModeFromRow(displayRow);
+            setDisplayModeState(d.mode);
+            setDisplayQuote(d.quote);
+            setDisplayQuestion(d.question);
+          }
+
+          if (reactionRow) setReactions(mapReactionsRow(reactionRow));
+
+          const slideCurrent = slideRow?.current ?? 1;
+          if (slideRow?.total) {
+            setSlides((prev) => ({
+              ...prev,
+              current: Math.min(slideCurrent, slideRow.total),
+              total: slideRow.total,
+            }));
+          }
+
+          void fetchSlidesDeck(eventTitle, slideCurrent).then(
+            (slideInfo) => {
+              if (cancelled) return;
+              if (slideRow?.total) {
+                slideInfo.total = slideRow.total;
+                slideInfo.current = Math.min(slideCurrent, slideRow.total);
+              }
+              setSlides(slideInfo);
+            }
+          );
+        } catch (err) {
+          console.warn("[session] secondary load failed (app still usable)", err);
+        }
 
         void Promise.all([
           supabase
@@ -404,14 +421,8 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
           }
         );
       } catch (err) {
-        const msg =
-          err instanceof TimeoutError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : "Unknown connection error";
         console.error("[session] load failed", err);
-        fail(msg);
+        fail(formatLoadError(err));
       }
     }
 

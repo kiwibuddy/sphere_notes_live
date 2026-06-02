@@ -26,7 +26,7 @@ export function SessionConnectionScreen({
             {error}
           </p>
           <ul className="text-left text-xs text-muted">
-            <li>Check Wi‑Fi and that Supabase project is active</li>
+            <li>Check Wi‑Fi and that Supabase project is active (not paused)</li>
             <li>
               Confirm <code className="rounded bg-surface px-1">.env.local</code>{" "}
               URL and publishable key
@@ -34,6 +34,7 @@ export function SessionConnectionScreen({
             <li>
               In Supabase: Authentication → Providers → Anonymous = ON
             </li>
+            <li>Free-tier projects sleep when idle — first load can take 30s</li>
           </ul>
           {onRetry && (
             <Button type="button" variant="outline" size="sm" onClick={onRetry}>
