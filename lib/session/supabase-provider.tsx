@@ -92,10 +92,14 @@ function saveClippings(clippings: Clipping[]) {
 
 async function fetchSlidesDeck(
   eventTitle: string,
-  current: number
+  current: number,
+  opts?: { bustCache?: boolean }
 ): Promise<SlideInfo> {
   try {
-    const res = await fetch("/api/slides");
+    const url = opts?.bustCache
+      ? `/api/slides?_=${Date.now()}`
+      : "/api/slides";
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to load slides");
     const data = (await res.json()) as { total: number; images: string[] };
     if (data.total === 0) {
@@ -193,17 +197,31 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
 
   const refreshSlides = useCallback(async () => {
     setSlidesLoading(true);
-    const supabase = getSupabaseBrowserClient();
-    const { data: slideRow } = await supabase
-      .from("day_slides")
-      .select("current")
-      .eq("event_id", eventId)
-      .eq("day", SLIDE_SYNC_DAY)
-      .maybeSingle();
-    const current = slideRow?.current ?? 1;
-    const next = await fetchSlidesDeck(meta.title, current);
-    setSlides(next);
-    setSlidesLoading(false);
+    try {
+      const supabase = getSupabaseBrowserClient();
+      const { data: slideRow } = await supabase
+        .from("day_slides")
+        .select("current")
+        .eq("event_id", eventId)
+        .eq("day", SLIDE_SYNC_DAY)
+        .maybeSingle();
+      const current = slideRow?.current ?? 1;
+      const next = await fetchSlidesDeck(meta.title, current, {
+        bustCache: true,
+      });
+      setSlides(next);
+      await supabase
+        .from("day_slides")
+        .update({
+          current: next.current,
+          total: next.total,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("event_id", eventId)
+        .eq("day", SLIDE_SYNC_DAY);
+    } finally {
+      setSlidesLoading(false);
+    }
   }, [meta.title, eventId]);
 
   const setSlideCurrent = useCallback(
@@ -338,24 +356,11 @@ export function SupabaseSessionProvider({ children }: { children: ReactNode }) {
           if (reactionRow) setReactions(mapReactionsRow(reactionRow));
 
           const slideCurrent = slideRow?.current ?? 1;
-          if (slideRow?.total) {
-            setSlides((prev) => ({
-              ...prev,
-              current: Math.min(slideCurrent, slideRow.total),
-              total: slideRow.total,
-            }));
-          }
 
-          void fetchSlidesDeck(eventTitle, slideCurrent).then(
-            (slideInfo) => {
-              if (cancelled) return;
-              if (slideRow?.total) {
-                slideInfo.total = slideRow.total;
-                slideInfo.current = Math.min(slideCurrent, slideRow.total);
-              }
-              setSlides(slideInfo);
-            }
-          );
+          void fetchSlidesDeck(eventTitle, slideCurrent).then((slideInfo) => {
+            if (cancelled) return;
+            setSlides(slideInfo);
+          });
         } catch (err) {
           console.warn("[session] secondary load failed (app still usable)", err);
         }
